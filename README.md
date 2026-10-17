@@ -4,6 +4,17 @@ A small, responsive to-do app with email/password accounts. Each account has a p
 
 **Sign out** ends the session on the current device. Other devices remain signed in.
 
+## A little preview
+
+A calm workspace on desktop, with the same focused task list on mobile.
+
+<p align="center">
+  <img src="./docs/little-list-desktop.svg" alt="Illustrated desktop preview of Little List, showing the Today list, projects, priorities, tags, and tasks" width="100%">
+</p>
+<p align="center">
+  <img src="./docs/little-list-mobile.svg" alt="Illustrated mobile preview of Little List with a compact Today task list" width="380">
+</p>
+
 ## Run locally
 
 1. Install Node.js 20.19+ or 22.12+.
