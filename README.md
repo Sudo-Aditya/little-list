@@ -55,7 +55,7 @@ If this folder is not connected to a Git repository, you can build locally and d
 npm install
 npm exec --yes --package=vercel -- vercel login
 npm run build
-npm exec --yes --package=vercel -- vercel link --cwd .\\dist --project little-list --scope anaiks-projects --yes
+npm exec --yes --package=vercel -- vercel link --cwd .\dist --project little-list --scope anaiks-projects --yes
 npm exec --yes --package=vercel -- vercel deploy dist --prod
 ```
 
