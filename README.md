@@ -15,6 +15,22 @@ A calm workspace on desktop, with the same focused task list on mobile.
   <img src="./docs/little-list-mobile.svg" alt="Illustrated mobile preview of Little List with a compact Today task list" width="380">
 </p>
 
+## Project structure
+
+```text
+.
+├── docs/                 # App illustrations and project notes
+├── public/               # Static assets served as-is
+├── src/                  # React UI, styles, and app helpers
+├── supabase/             # Database schema and SQL migrations
+├── test/                 # Node.js unit tests
+├── index.html            # Vite app entry point
+├── package.json          # Scripts and dependencies
+└── package-lock.json     # Reproducible dependency versions
+```
+
+Local environment files, generated builds, editor configuration, browser captures, and UI QA screenshots are intentionally excluded from Git.
+
 ## Run locally
 
 1. Install Node.js 20.19+ or 22.12+.
