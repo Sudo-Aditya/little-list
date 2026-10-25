@@ -23,6 +23,7 @@ qa/
 ├── requirements/
 │   └── traceability-matrix.md     # requirement ID → test case IDs → automation status
 ├── test-cases/
+│   ├── accessibility-cases.md      # WCAG 2.1 AA audit + cases (keyboard, SR, contrast, focus…)
 │   ├── functional-scenarios.md    # end-to-end journeys
 │   ├── positive-cases.md          # per-feature happy paths
 │   ├── negative-cases.md          # invalid input / error paths
