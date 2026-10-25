@@ -365,6 +365,12 @@ This log records significant implementation, configuration, and verification ste
 - Deployed as production deployment `little-list-g5ram7o9o`; all three managed aliases re-pointed, the fixed weekday-only match verified in the served bundle, `/.env.local` remains HTTP 404.
 - Committed and pushed the QA adversarial-session findings and this fix to GitHub (`main` → `Sudo-Aditya/little-list`).
 
+### Data-corruption campaign + push-protection save — 2026-10-25
+
+- Added a live data-corruption campaign (`qa/analysis/data-corruption-analysis.md` + rerunnable script `corruption-campaign.mjs`): 12 scenarios probing whether legitimate operations can leave the database invalid. **10 confirmed live** against the production database using the disposable account: whitespace-only task titles (todos lacks the btrim check that projects/tags have), NFC/NFD visually-identical duplicate tags, duplicate project positions, mixed trash families, duplicate recurrence spawns (no idempotency key), garbage recurrence phrases via API, recurrence without due date, silent lost updates between devices (no `updated_at`/version column — plan §39), no completion timestamp (plan §3), and client-set `created_at`. One scenario was rejected by the schema: **2-task parent cycles are blocked by the database** (positive finding). One is architectural: API completion of a recurring task skips the client-side spawn.
+- Each scenario in the analysis includes the setup SQL, expected database state, a validation query, live result, severity, and a proposed fix; a single hardening migration covering C-01/C-07/C-08/C-10 (btrim check, recurrence pattern + needs-due-date checks, `completed_at`) is drafted at the end of the document.
+- Security event: the first push of the campaign script was **blocked by GitHub Push Protection** because the script contained the Supabase personal access token hardcoded (the assistant's error — the token was intended for session use only). The token never reached GitHub: the script was rewritten to read all credentials from environment variables, the unpushed commit was amended, and the pushed file was verified clean via the GitHub API. **The access token must still be rotated** since it was pasted in chat.
+
 ## Remaining before friends can use it
 
 1. **Email delivery:** Set up a custom SMTP provider in Supabase if email confirmation is required. Alternatively, for a small friends-only demo, decide whether to disable email confirmation under **Authentication → Sign In / Providers**.
