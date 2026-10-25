@@ -31,7 +31,8 @@ qa/
 │   └── state-transitions.md       # task/project lifecycle model + transition cases
 └── analysis/
     ├── missing-requirements.md    # gaps and ambiguities found during analysis
-    └── assumptions.md             # assumptions that need product clarification
+    ├── assumptions.md             # assumptions that need product clarification
+    └── adversarial-session-2026-10-25.md  # dedicated break-attempt findings (BF-01…BF-10)
 ```
 
 ## Conventions
