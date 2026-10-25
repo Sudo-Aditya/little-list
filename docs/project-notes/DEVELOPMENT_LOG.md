@@ -348,6 +348,14 @@ This log records significant implementation, configuration, and verification ste
 - Notable defect-level findings recorded for action: tag name UI/DB length mismatch (80 vs 40), raw database errors surfacing to users (plan §32 violation), Today/Upcoming counts including completed tasks, and title-only search against plan §11.
 - 78 cases are High automation suitability and map onto the existing `node --test` suites; the remaining Med/Low cases define the Playwright and manual backlogs.
 
+### GitHub repo reconciled and all changes pushed — 2026-10-25
+
+- The user installed the GitHub CLI (assisted — winget's silent install needed locating in the WinGet packages cache) and completed device-flow authentication; git is configured to use the GitHub credential helper via `gh auth setup-git`.
+- Discovered during push: the existing GitHub repository [`Sudo-Aditya/little-list`](https://github.com/Sudo-Aditya/little-list) contains the **original project's history** — seven commits including `src/lib/` modules and `src/styles.css`. This resolves the long-standing mystery of the local `./lib/` imports: the local working copy was a reorganized checkout that had lost its `.git` folder while the original version lived on GitHub.
+- Rather than discarding that history, it was merged: `git merge origin/main --allow-unrelated-histories -X ours` preserves both lineages with the current Todoist-style app winning all content conflicts, followed by a cleanup commit removing the legacy `src/lib/` modules and stylesheet the merge resurrected.
+- Pushed `47e54ac..2225247` to `main` (normal fast-forward). Remote tree verified: 59 files, matching local exactly, no legacy paths. Latest commit on GitHub: `2225247`.
+- Repository visibility is currently **public** (user's choice at creation). The secret scan found no tokens or credentials in tracked files, but the `qa/` suite and dev log are publicly readable — flip to private in Settings if preferred.
+
 ## Remaining before friends can use it
 
 1. **Email delivery:** Set up a custom SMTP provider in Supabase if email confirmation is required. Alternatively, for a small friends-only demo, decide whether to disable email confirmation under **Authentication → Sign In / Providers**.
