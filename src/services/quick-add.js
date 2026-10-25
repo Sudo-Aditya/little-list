@@ -86,7 +86,7 @@ export function parseQuickAdd(text, { projects = [], tags = [], parseDates = tru
         working = collapseSpaces(`${found.before} ${found.after}`);
         parsed.recurrence = found.recurrence;
         if (parsed.dueDateKey === null) {
-          const weekdayMatch = /^every (\w+)$/.exec(found.recurrence);
+          const weekdayMatch = /^every (sunday|monday|tuesday|wednesday|thursday|friday|saturday)$/.exec(found.recurrence);
           parsed.dueDateKey = weekdayMatch
             ? addDaysToKey(todayKey, weekdayOffset(weekdayMatch[1], todayKey, false))
             : todayKey;

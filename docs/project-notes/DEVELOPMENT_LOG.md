@@ -356,6 +356,15 @@ This log records significant implementation, configuration, and verification ste
 - Pushed `47e54ac..2225247` to `main` (normal fast-forward). Remote tree verified: 59 files, matching local exactly, no legacy paths. Latest commit on GitHub: `2225247`.
 - Repository visibility is currently **public** (user's choice at creation). The secret scan found no tokens or credentials in tracked files, but the `qa/` suite and dev log are publicly readable — flip to private in Settings if preferred.
 
+### Sev-1 fix: quick-add crash on interval recurrence phrases — 2026-10-25
+
+- Re-verification caught a live production crash: typing `every day ` (or any interval recurrence phrase with trailing text, e.g. `every day p2`) into the quick-add modal unmounted the entire application (`RangeError: Invalid time value`, React root emptied, white screen). Captured with per-keystroke tracing after two earlier modal-close failures were shown to share this root cause.
+- Root cause (two layers): 1) in `quick-add.js`, the recurrence branch derived the first due date with `/^every (\w+)$/`, so the interval rule `every day` fell into the *weekday* branch — `weekdayOffset("day", …)` has no weekday mapping and produced `dueDateKey = "NaN-NaN-NaN"`; 2) `formatDueKey` then passed the malformed key to `Intl.DateTimeFormat.format`, which throws on invalid dates, and with no error boundary React unmounted the root.
+- Fixes: the weekday branch now matches only real weekday names (`every sunday…saturday`; interval rules correctly set today as the first occurrence), and `formatDueKey` returns an empty string for malformed keys instead of ever throwing.
+- Three regression tests added (interval first-occurrence = today, weekday first-occurrence unchanged, `formatDueDate` immune to malformed keys); the suite is at 68, all passing. Verified in the browser: the exact crash text now renders chips (P2 · High, Due today, every day) and creates the task correctly.
+- Deployed as production deployment `little-list-g5ram7o9o`; all three managed aliases re-pointed, the fixed weekday-only match verified in the served bundle, `/.env.local` remains HTTP 404.
+- Committed and pushed the QA adversarial-session findings and this fix to GitHub (`main` → `Sudo-Aditya/little-list`).
+
 ## Remaining before friends can use it
 
 1. **Email delivery:** Set up a custom SMTP provider in Supabase if email confirmation is required. Alternatively, for a small friends-only demo, decide whether to disable email confirmation under **Authentication → Sign In / Providers**.

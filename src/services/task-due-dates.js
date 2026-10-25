@@ -57,7 +57,11 @@ export function classifyDueDate(dueDate, todayKey) {
 }
 
 function formatDueKey(key) {
-  return dueDateFormatter.format(toDateFromKey(key));
+  const date = toDateFromKey(key);
+  // Defense in depth: an invalid key must never crash a render (a NaN date
+  // makes Intl.format throw "Invalid time value", unmounting the app).
+  if (Number.isNaN(date.getTime())) return "";
+  return dueDateFormatter.format(date);
 }
 
 // Human label for a task's due date. Overdue tasks lead with "Overdue" so the

@@ -99,3 +99,8 @@ test("sidebar view buckets: Today includes overdue, Upcoming is strictly later",
   assert.deepEqual(filterTodosByDueDate(todos, "due-today", today).map((todo) => todo.id), [2, 3]);
   assert.deepEqual(filterTodosByDueDate(todos, "upcoming", today).map((todo) => todo.id), [4, 5]);
 });
+
+test("formatDueDate never throws on malformed keys", () => {
+  assert.equal(formatDueDate("NaN-NaN-NaN", "2026-10-24"), "");
+  assert.equal(formatDueDate(undefined, "2026-10-24"), "");
+});

@@ -118,3 +118,18 @@ test("empty description content leaves an empty title for validation", () => {
   assert.equal(parsed.title, "");
   assert.equal(parsed.description, "forgot the title");
 });
+
+test("interval recurrence rules set today as the first occurrence, never NaN", () => {
+  const parsed = parseQuickAdd("Water the plants every day ", { todayKey: TODAY });
+  assert.equal(parsed.recurrence, "every day");
+  assert.equal(parsed.dueDateKey, TODAY);
+  const withToken = parseQuickAdd("Water the plants every day p2", { todayKey: TODAY });
+  assert.equal(withToken.dueDateKey, TODAY);
+  assert.equal(withToken.priority, "high");
+});
+
+test("weekday recurrence rules still pick the coming weekday", () => {
+  const parsed = parseQuickAdd("Standup every friday", { todayKey: TODAY });
+  assert.equal(parsed.recurrence, "every friday");
+  assert.equal(parsed.dueDateKey, "2026-10-30");
+});
