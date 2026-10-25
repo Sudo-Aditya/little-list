@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="70" y1="40" x2="1320" y2="880" gradientUnits="userSpaceOnUse"><stop stop-color="#F4F0E8"/><stop offset="1" stop-color="#E8EEE8"/></linearGradient>
+    <linearGradient id="accent" x1="930" y1="120" x2="1270" y2="420" gradientUnits="userSpaceOnUse"><stop stop-color="#E4EFE7"/><stop offset="1" stop-color="#D4E4D9"/></linearGradient>
+    <filter id="shadow" x="90" y="65" width="1260" height="790" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="bgfix"/><feGaussianBlur in="SourceAlpha" stdDeviation="18"/><feOffset dy="16"/><feComposite in2="SourceAlpha" operator="out"/><feColorMatrix values="0 0 0 0 0.18 0 0 0 0 0.22 0 0 0 0 0.19 0 0 0 .15 0"/><feBlend in2="bgfix" result="shadow"/><feBlend in="SourceGraphic" in2="shadow" result="shape"/></filter>
+    <clipPath id="window"><rect x="120" y="92" width="1200" height="700" rx="20"/></clipPath>
+  </defs>
+  <rect width="1440" height="900" rx="30" fill="url(#bg)"/>
+  <circle cx="1250" cy="150" r="125" fill="#E0EAE1" opacity=".65"/>
+  <circle cx="180" cy="770" r="170" fill="#E9E2D5" opacity=".56"/>
+  <g filter="url(#shadow)">
+    <g clip-path="url(#window)">
+      <rect x="120" y="92" width="1200" height="700" fill="#fff"/>
+      <rect x="120" y="92" width="1200" height="48" fill="#FAFAF8"/>
+      <circle cx="148" cy="116" r="5" fill="#E5AAA0"/><circle cx="167" cy="116" r="5" fill="#EACB8C"/><circle cx="186" cy="116" r="5" fill="#A8C9AE"/>
+      <rect x="530" y="104" width="380" height="24" rx="12" fill="#F0F0ED"/><text x="720" y="120" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" fill="#92958E">littlelist.app</text>
+      <rect x="120" y="140" width="250" height="652" fill="#FAFAF8"/>
+      <rect x="150" y="168" width="29" height="29" rx="9" fill="#296247"/><path d="m158 182 5 5 9-11" stroke="white" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><text x="191" y="188" font-family="Inter,Arial,sans-serif" font-weight="700" font-size="19" fill="#222821">Little List</text>
+      <rect x="150" y="222" width="190" height="40" rx="9" fill="#EAF1EB"/><circle cx="169" cy="242" r="6" stroke="#376B4C" stroke-width="1.8"/><path d="M169 238v4l3 2" stroke="#376B4C" stroke-width="1.5" stroke-linecap="round"/><text x="186" y="247" font-family="Inter,Arial,sans-serif" font-weight="600" font-size="14" fill="#315E43">Today</text><text x="316" y="247" text-anchor="end" font-family="Inter,Arial,sans-serif" font-size="12" fill="#68836E">5</text>
+      <circle cx="169" cy="286" r="6" stroke="#858980" stroke-width="1.6"/><text x="186" y="291" font-family="Inter,Arial,sans-serif" font-size="14" fill="#555A53">Upcoming</text>
+      <path d="M151 321h188" stroke="#E9E9E5"/>
+      <text x="152" y="354" font-family="Inter,Arial,sans-serif" font-size="10" font-weight="700" letter-spacing="1.2" fill="#969990">YOUR PROJECTS</text>
+      <rect x="160" y="375" width="9" height="9" rx="3" fill="#D58A67"/><text x="184" y="385" font-family="Inter,Arial,sans-serif" font-size="13" fill="#4B4F49">Personal</text>
+      <rect x="160" y="410" width="9" height="9" rx="3" fill="#7497B6"/><text x="184" y="420" font-family="Inter,Arial,sans-serif" font-size="13" fill="#4B4F49">Work</text>
+      <rect x="160" y="445" width="9" height="9" rx="3" fill="#A28BAE"/><text x="184" y="455" font-family="Inter,Arial,sans-serif" font-size="13" fill="#4B4F49">Reading list</text>
+      <text x="152" y="510" font-family="Inter,Arial,sans-serif" font-size="10" font-weight="700" letter-spacing="1.2" fill="#969990">QUICK FILTERS</text>
+      <circle cx="165" cy="537" r="4" fill="#D97866"/><text x="184" y="542" font-family="Inter,Arial,sans-serif" font-size="13" fill="#4B4F49">High priority</text>
+      <circle cx="165" cy="572" r="4" fill="#7A9E83"/><text x="184" y="577" font-family="Inter,Arial,sans-serif" font-size="13" fill="#4B4F49">Tagged tasks</text>
+      <path d="M120 741h250" stroke="#E9E9E5"/><circle cx="166" cy="765" r="13" fill="#E2ECE3"/><text x="166" y="769" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="700" fill="#41654A">A</text><text x="188" y="769" font-family="Inter,Arial,sans-serif" font-size="12" fill="#545950">Your private space</text>
+      <rect x="370" y="140" width="950" height="652" fill="#fff"/>
+      <rect x="1010" y="140" width="310" height="652" fill="url(#accent)" opacity=".28"/>
+      <text x="425" y="194" font-family="Inter,Arial,sans-serif" font-size="12" fill="#8A8E86">Tuesday, October 21</text>
+      <text x="425" y="241" font-family="Inter,Arial,sans-serif" font-size="30" font-weight="700" fill="#242923">Today</text>
+      <text x="425" y="267" font-family="Inter,Arial,sans-serif" font-size="13" fill="#777C73">A little progress goes a long way.</text>
+      <rect x="1161" y="173" width="112" height="36" rx="9" fill="#F7F8F5" stroke="#E9EBE6"/><path d="M1178 185v12m-5-6h10" stroke="#667064" stroke-width="1.5" stroke-linecap="round"/><text x="1195" y="196" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="600" fill="#52584F">Add task</text>
+      <path d="M425 297h840" stroke="#EAECE8"/>
+      <circle cx="442" cy="337" r="9" stroke="#9CA49A" stroke-width="1.5"/><text x="467" y="342" font-family="Inter,Arial,sans-serif" font-size="14" fill="#30352F">Plan the week and pick top priorities</text><rect x="467" y="354" width="62" height="21" rx="6" fill="#F7E8E1"/><text x="498" y="368" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="10" font-weight="600" fill="#A85E47">Personal</text><circle cx="1243" cy="337" r="4" fill="#D97866"/>
+      <path d="M425 393h840" stroke="#F0F1EE"/>
+      <circle cx="442" cy="432" r="9" stroke="#9CA49A" stroke-width="1.5"/><text x="467" y="437" font-family="Inter,Arial,sans-serif" font-size="14" fill="#30352F">Send the project update</text><rect x="467" y="449" width="49" height="21" rx="6" fill="#E6EDF3"/><text x="491" y="463" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="10" font-weight="600" fill="#55718A">Work</text><rect x="524" y="449" width="72" height="21" rx="6" fill="#E7EFE8"/><text x="560" y="463" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="10" font-weight="600" fill="#55745C">Writing</text><circle cx="1243" cy="432" r="4" fill="#D97866"/>
+      <path d="M425 489h840" stroke="#F0F1EE"/>
+      <circle cx="442" cy="528" r="9" stroke="#9CA49A" stroke-width="1.5"/><text x="467" y="533" font-family="Inter,Arial,sans-serif" font-size="14" fill="#30352F">Review notes from the team meeting</text><rect x="467" y="545" width="49" height="21" rx="6" fill="#E6EDF3"/><text x="491" y="559" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="10" font-weight="600" fill="#55718A">Work</text><circle cx="1243" cy="528" r="4" fill="#D5A342"/>
+      <path d="M425 585h840" stroke="#F0F1EE"/>
+      <circle cx="442" cy="624" r="9" stroke="#9CA49A" stroke-width="1.5"/><text x="467" y="629" font-family="Inter,Arial,sans-serif" font-size="14" fill="#30352F">Read a few pages before bed</text><rect x="467" y="641" width="84" height="21" rx="6" fill="#F0EAF4"/><text x="509" y="655" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="10" font-weight="600" fill="#806B8A">Reading list</text><circle cx="1243" cy="624" r="4" fill="#8CA48E"/>
+      <path d="M425 681h840" stroke="#F0F1EE"/>
+      <circle cx="442" cy="720" r="9" stroke="#A8B0A6" stroke-width="1.5"/><path d="m438 720 3 3 5-6" stroke="#6F8E72" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><text x="467" y="725" font-family="Inter,Arial,sans-serif" font-size="14" fill="#91968E" text-decoration="line-through">Water the plants</text><text x="425" y="767" font-family="Inter,Arial,sans-serif" font-size="12" fill="#81877E">+ Add a task</text>
+    </g>
+  </g>
+  <rect x="120" y="92" width="1200" height="700" rx="20" stroke="#E3E5DF" stroke-width="1.5"/>
+  <rect x="922" y="817" width="405" height="43" rx="21.5" fill="#fff" opacity=".86"/><circle cx="946" cy="838" r="5" fill="#52815E"/><text x="961" y="842" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="600" fill="#566056">Projects Â· priorities Â· tags Â· subtasks</text>
+</svg>

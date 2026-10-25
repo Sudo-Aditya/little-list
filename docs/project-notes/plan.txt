@@ -1,0 +1,1347 @@
+You are a senior product engineer, system design engineer, UX engineer, security engineer, and QA engineer.
+
+Build a production-quality To-Do application from the ground up.
+
+Do not treat this as a simple CRUD demo. Design it as a real application that could eventually support thousands or millions of users.
+
+Before writing code:
+
+1. Analyze the requirements.
+2. Identify ambiguities and make reasonable engineering decisions.
+3. Define the architecture.
+4. Define the database schema.
+5. Define the API contract.
+6. Define the frontend architecture.
+7. Define authentication and authorization.
+8. Define the background-job architecture.
+9. Define the testing strategy.
+10. Define the deployment strategy.
+
+Then implement the application incrementally.
+
+Do not ask unnecessary questions. When a requirement is unspecified, choose a sensible production-grade default and document the decision.
+
+## PRODUCT GOAL
+
+Build a fast, clean, responsive, accessible task-management application that allows users to:
+
+- Create and manage tasks
+- Organize tasks into projects/lists
+- Set priorities
+- Set due dates
+- Create recurring tasks
+- Create reminders
+- Add subtasks
+- Add tags
+- Search tasks
+- Filter and sort tasks
+- Reorder tasks
+- View tasks by different contexts
+- Archive/delete/restore tasks
+- Track task activity
+- Manage personal preferences
+- Export their data
+- Use the application reliably on desktop and mobile
+
+The architecture should leave room for future collaboration, comments, attachments, calendar integrations, and team functionality.
+
+---
+
+# 1. AUTHENTICATION
+
+Implement secure user authentication.
+
+Required:
+
+- Sign up
+- Login
+- Logout
+- Password reset
+- Password change
+- Email verification
+- Session management
+- Account deletion
+
+Optional if supported cleanly by the selected stack:
+
+- Google OAuth
+- Apple OAuth
+- Microsoft OAuth
+- Passkeys
+
+Never trust a user ID supplied by the frontend.
+
+Determine the current authenticated user from the authenticated session/token.
+
+All user-owned resources must be authorization-protected.
+
+A user must never be able to access another user's:
+
+- Tasks
+- Projects
+- Tags
+- Reminders
+- Attachments
+- Preferences
+- Export data
+
+---
+
+# 2. TASKS
+
+A task must support:
+
+- ID
+- Title
+- Description
+- Status
+- Priority
+- Due date/time
+- Completion timestamp
+- Project
+- Parent task
+- Position/order
+- Created timestamp
+- Updated timestamp
+- Deleted timestamp for soft deletion
+
+Task operations:
+
+- Create
+- Read
+- Update
+- Complete
+- Reopen
+- Delete
+- Restore
+- Archive
+- Duplicate
+
+Do not permanently delete tasks immediately.
+
+Use soft deletion where appropriate so users can recover accidentally deleted tasks.
+
+Validate all task input on the server.
+
+Task titles must not be empty.
+
+---
+
+# 3. TASK STATUS
+
+Support at least:
+
+- Pending
+- Completed
+- Archived
+
+Design the state model so it can be extended later.
+
+When a task is completed:
+
+- Set completed_at
+- Preserve the task
+- Allow undo/reopen
+
+---
+
+# 4. PRIORITIES
+
+Support:
+
+- None
+- Low
+- Medium
+- High
+- Urgent
+
+Priority must be represented as structured data rather than purely visual styling.
+
+Users must be able to filter and sort by priority.
+
+---
+
+# 5. PROJECTS / LISTS
+
+Users can create projects/lists.
+
+Each project should support:
+
+- Name
+- Description
+- Color
+- Icon
+- Position
+- Archived state
+- Created timestamp
+- Updated timestamp
+
+Users can:
+
+- Create
+- Rename
+- Reorder
+- Archive
+- Delete projects
+
+Do not hard-code projects such as Personal or Work.
+
+---
+
+# 6. SUBTASKS
+
+Tasks can have child tasks.
+
+Implement parent-child relationships using parent_task_id or an equivalent relational structure.
+
+Example:
+
+Launch website
+
+- Create landing page
+- Configure domain
+- Configure analytics
+- Test mobile layout
+- Deploy
+
+Display completion progress such as:
+
+3 / 5 completed
+
+Prevent invalid relationships such as a task being its own parent.
+
+---
+
+# 7. TAGS
+
+Implement reusable user-owned tags.
+
+A task can have multiple tags.
+
+Users can:
+
+- Create tags
+- Rename tags
+- Delete tags
+- Add tags to tasks
+- Remove tags from tasks
+
+Support filtering by tags.
+
+---
+
+# 8. DATES AND TIME
+
+Tasks may have:
+
+- No due date
+- Due date
+- Due date + time
+
+Store timestamps in UTC.
+
+Store the user's timezone in their profile/preferences.
+
+Convert timestamps appropriately for display.
+
+Handle daylight-saving-time transitions correctly where applicable.
+
+Never assume the server's timezone is the user's timezone.
+
+---
+
+# 9. RECURRING TASKS
+
+Support recurring tasks.
+
+At minimum:
+
+- Daily
+- Weekly
+- Monthly
+- Yearly
+- Custom interval
+- Specific weekdays
+- Optional end date
+
+Examples:
+
+Every day at 9 AM.
+
+Every Monday and Friday.
+
+Every month on the 1st.
+
+Do not create an unbounded number of future tasks.
+
+Store the recurrence rule and generate task instances intelligently.
+
+Ensure recurring tasks do not produce duplicate instances when background jobs retry.
+
+---
+
+# 10. REMINDERS
+
+Separate due dates from reminders.
+
+A task may have multiple reminders.
+
+Examples:
+
+Due Friday at 5 PM.
+
+Reminder:
+24 hours before.
+
+Reminder:
+1 hour before.
+
+Support:
+
+- In-app reminders
+- Push notifications where supported
+- Email notifications where supported
+
+Implement reminders using background jobs/workers rather than relying on the browser remaining open.
+
+Background jobs must be idempotent.
+
+A failed job should be retryable without sending duplicate notifications.
+
+---
+
+# 11. SEARCH
+
+Implement task search.
+
+Search should support at least:
+
+- Task title
+- Description
+
+Where practical, also search:
+
+- Tags
+- Project names
+
+Use the database's native search capabilities initially unless there is a strong reason to introduce a dedicated search engine.
+
+Search must be debounced on the frontend.
+
+---
+
+# 12. FILTERING
+
+Support composable filters.
+
+Examples:
+
+- Project
+- Status
+- Priority
+- Tag
+- Due date
+- Overdue
+- Completed
+- Archived
+
+Users should be able to combine filters.
+
+Example:
+
+Project = Work
+
+AND
+
+Priority = High
+
+AND
+
+Status != Completed
+
+AND
+
+Due = This Week
+
+Do not implement each combination as a separate hard-coded endpoint.
+
+---
+
+# 13. SORTING
+
+Support:
+
+- Manual order
+- Due date
+- Priority
+- Created date
+- Updated date
+- Alphabetical
+
+Implement persistent manual ordering.
+
+The ordering mechanism should avoid unnecessary renumbering of every task after each drag operation.
+
+---
+
+# 14. VIEWS
+
+Implement these primary views:
+
+## Inbox
+
+Tasks not assigned to a specific project/list.
+
+## Today
+
+Tasks relevant to today.
+
+## Upcoming
+
+Future tasks.
+
+## Overdue
+
+Tasks whose due dates have passed.
+
+## Completed
+
+Completed tasks.
+
+## Project view
+
+Tasks belonging to a selected project.
+
+## Search
+
+Search results with active filters.
+
+Design the architecture so Calendar and Kanban views can be added later.
+
+---
+
+# 15. DRAG AND DROP
+
+Allow users to reorder:
+
+- Tasks
+- Projects
+
+Persist the new order.
+
+Provide a good mobile fallback where drag-and-drop is difficult.
+
+Do not make drag-and-drop the only way to change ordering.
+
+---
+
+# 16. TASK DETAILS
+
+A task detail interface should support:
+
+- Title
+- Description
+- Status
+- Priority
+- Due date
+- Reminder
+- Project
+- Tags
+- Subtasks
+- Activity/history
+- Attachments if implemented
+
+Changes should save reliably.
+
+Use optimistic UI where appropriate.
+
+If an optimistic update fails, revert the UI and clearly communicate the failure.
+
+---
+
+# 17. ATTACHMENTS
+
+If attachments are implemented, do not store large files directly in the relational database.
+
+Use object storage.
+
+The database should store metadata such as:
+
+- Attachment ID
+- Task ID
+- Filename
+- MIME type
+- File size
+- Storage key
+- Created timestamp
+
+Validate:
+
+- File size
+- MIME type
+- Authorization
+
+Prevent users from accessing files belonging to other users.
+
+---
+
+# 18. ACTIVITY HISTORY
+
+Track important task events.
+
+Examples:
+
+- Task created
+- Title changed
+- Priority changed
+- Due date changed
+- Project changed
+- Task completed
+- Task reopened
+- Task deleted
+
+Display a readable timeline.
+
+Do not expose sensitive internal system information to users.
+
+---
+
+# 19. UNDO AND TRASH
+
+Provide immediate undo for destructive actions.
+
+Example:
+
+User deletes task.
+
+Show:
+
+"Task deleted — Undo"
+
+Use soft deletion/trash where appropriate.
+
+Allow users to restore deleted tasks.
+
+Provide permanent deletion only where appropriate.
+
+---
+
+# 20. OFFLINE SUPPORT
+
+Design the frontend so basic task operations can eventually work offline.
+
+At minimum, gracefully handle:
+
+- Network unavailable
+- Request timeout
+- Temporary server failure
+
+If implementing full offline support, maintain a local cache/database and synchronization mechanism.
+
+Use deterministic conflict resolution.
+
+Avoid silently losing user changes.
+
+Display synchronization state when relevant.
+
+---
+
+# 21. RESPONSIVE DESIGN
+
+The application must work well on:
+
+- Desktop
+- Tablet
+- Mobile
+
+Do not simply scale down the desktop interface.
+
+Design mobile interactions specifically for touch.
+
+The interface should remain usable at narrow viewport widths.
+
+---
+
+# 22. ACCESSIBILITY
+
+Follow WCAG principles.
+
+Implement:
+
+- Semantic HTML
+- Keyboard navigation
+- Visible focus states
+- Proper labels
+- Screen-reader support
+- Accessible modals
+- Accessible dropdowns
+- Accessible date/time controls
+- Sufficient color contrast
+- Reduced-motion support
+
+Never communicate important information through color alone.
+
+---
+
+# 23. KEYBOARD SHORTCUTS
+
+Where appropriate, support:
+
+N = New task
+
+/ = Search
+
+Space = Complete selected task
+
+E = Edit selected task
+
+Delete = Delete selected task
+
+Escape = Close modal/dialog
+
+Do not trigger shortcuts while the user is typing into an input unless appropriate.
+
+Provide a shortcut/help interface.
+
+---
+
+# 24. SETTINGS
+
+Implement:
+
+## Account
+
+- Name
+- Email
+- Password
+- Delete account
+
+## Appearance
+
+- Light
+- Dark
+- System
+
+## Notifications
+
+- Push preferences
+- Email preferences
+- Default reminder
+
+## Task defaults
+
+- Default project
+- Default priority
+
+## Localization
+
+- Timezone
+- Date format
+- First day of week
+
+Persist preferences per user.
+
+---
+
+# 25. DATA EXPORT
+
+Users must be able to export their data.
+
+At minimum support JSON or CSV.
+
+Export should include relevant:
+
+- Tasks
+- Projects
+- Tags
+- Task relationships
+- Due dates
+- Completion information
+
+Do not expose another user's information in an export.
+
+---
+
+# 26. API DESIGN
+
+Use a consistent REST or equivalent API design.
+
+Example:
+
+GET /api/tasks
+
+POST /api/tasks
+
+GET /api/tasks/:id
+
+PATCH /api/tasks/:id
+
+DELETE /api/tasks/:id
+
+GET /api/projects
+
+POST /api/projects
+
+PATCH /api/projects/:id
+
+DELETE /api/projects/:id
+
+Use consistent:
+
+- HTTP status codes
+- Error format
+- Validation errors
+- Pagination
+- Authentication handling
+
+Document the API contract.
+
+---
+
+# 27. DATABASE
+
+Use a relational database unless there is a strong reason not to.
+
+Recommended initial entities:
+
+users
+
+projects
+
+tasks
+
+tags
+
+task_tags
+
+reminders
+
+attachments
+
+activity_events
+
+If collaboration is planned:
+
+project_members
+
+Use foreign keys and appropriate indexes.
+
+Consider indexes around common access patterns such as:
+
+- user_id
+- project_id
+- status
+- due_at
+- created_at
+- updated_at
+
+Do not add indexes blindly. Explain each important index.
+
+---
+
+# 28. ARCHITECTURE
+
+Prefer a modular monolith for the initial version rather than premature microservices.
+
+Recommended conceptual architecture:
+
+Frontend
+
+↓
+
+API/backend
+
+↓
+
+Service/domain layer
+
+↓
+
+Database
+
+↓
+
+Background job queue/workers
+
+↓
+
+Notification services
+
+Object storage may be used for attachments.
+
+Keep domain logic separated from HTTP/controller code.
+
+Organize code by domain where practical:
+
+- auth
+- tasks
+- projects
+- tags
+- reminders
+- notifications
+- users
+- attachments
+
+Avoid one enormous generic utility/service folder.
+
+---
+
+# 29. BACKGROUND JOBS
+
+Use background workers for:
+
+- Reminders
+- Notifications
+- Recurring-task generation
+- Data exports
+- Attachment processing
+- Cleanup
+
+Jobs must be:
+
+- Retryable
+- Idempotent
+- Observable
+- Safe against duplicate execution
+
+---
+
+# 30. SECURITY
+
+Implement production-grade security.
+
+Requirements:
+
+- Secure password hashing
+- Authentication protection
+- Authorization checks
+- Input validation
+- SQL injection prevention
+- XSS protection
+- CSRF protection where applicable
+- Rate limiting
+- Secure cookies where applicable
+- HTTPS
+- Secure headers
+- File upload validation
+- Proper CORS configuration
+- Secrets stored outside source code
+
+Never log:
+
+- Passwords
+- Access tokens
+- Refresh tokens
+- Sensitive personal data
+
+Do not expose internal database errors to users.
+
+---
+
+# 31. PERFORMANCE
+
+The app should remain responsive as data grows.
+
+Implement:
+
+- Pagination or cursor pagination
+- Database indexes
+- Debounced search
+- Efficient queries
+- Lazy loading
+- Virtualized lists where necessary
+- Optimistic updates where appropriate
+
+Do not load thousands of tasks into the browser unnecessarily.
+
+Avoid N+1 database queries.
+
+---
+
+# 32. ERROR HANDLING
+
+Create a consistent error model.
+
+Example:
+
+{
+  "error": {
+    "code": "TASK_NOT_FOUND",
+    "message": "The requested task could not be found."
+  }
+}
+
+Frontend errors should be understandable and actionable.
+
+Examples:
+
+"Couldn't save the task. Check your connection and try again."
+
+"Task title cannot be empty."
+
+"You're offline. Your changes will sync when the connection is restored."
+
+Never show raw stack traces to users.
+
+---
+
+# 33. OBSERVABILITY
+
+Implement structured logging.
+
+Track:
+
+- API requests
+- API latency
+- Errors
+- Background jobs
+- Notification failures
+
+Where appropriate, provide metrics for:
+
+- Request latency
+- Error rate
+- Database latency
+- Queue depth
+- Failed jobs
+
+Use an error-tracking system if available.
+
+Do not log sensitive user content unnecessarily.
+
+---
+
+# 34. TESTING
+
+Write automated tests.
+
+## Unit tests
+
+Cover:
+
+- Task state transitions
+- Recurrence calculations
+- Date/time handling
+- Permission checks
+- Filtering
+- Sorting
+- Validation
+
+## Integration tests
+
+Cover:
+
+- Authentication
+- Database operations
+- Task creation
+- Task completion
+- Authorization
+- Reminder creation
+
+## End-to-end tests
+
+Cover the critical journey:
+
+Sign up
+
+↓
+
+Create project
+
+↓
+
+Create task
+
+↓
+
+Set priority
+
+↓
+
+Set due date
+
+↓
+
+Create reminder
+
+↓
+
+Complete task
+
+Also test:
+
+- Unauthorized access
+- Invalid input
+- Session expiration
+- Network failure
+- Duplicate requests
+- Task restoration
+- Recurring tasks
+
+---
+
+# 35. UI/UX REQUIREMENTS
+
+The UI should feel:
+
+- Fast
+- Clean
+- Minimal
+- Responsive
+- Consistent
+- Accessible
+
+Use a clear visual hierarchy.
+
+The primary action should be obvious:
+
+"Add task"
+
+Task completion should require minimal interaction.
+
+Avoid excessive modal dialogs.
+
+Use inline editing where it improves usability.
+
+Use confirmation dialogs only for genuinely destructive actions.
+
+Provide loading, empty, error, and success states for every major screen.
+
+---
+
+# 36. EMPTY STATES
+
+Do not leave blank screens.
+
+Examples:
+
+No tasks:
+
+"You're all caught up."
+
+No projects:
+
+"Create your first project to organize your tasks."
+
+No search results:
+
+"No tasks match your search."
+
+Make empty states useful and actionable.
+
+---
+
+# 37. DESIGN SYSTEM
+
+Create reusable components for:
+
+- Buttons
+- Inputs
+- Selects
+- Dropdowns
+- Dialogs
+- Toasts
+- Task rows
+- Project rows
+- Tags
+- Date picker
+- Priority selector
+- Loading states
+- Empty states
+- Error states
+
+Avoid duplicating UI logic across screens.
+
+Use consistent spacing, typography, colors, border radius, and interaction states.
+
+---
+
+# 38. MOBILE UX
+
+On mobile:
+
+- Make task creation extremely fast
+- Make completion easy with touch
+- Avoid tiny click targets
+- Provide appropriate bottom navigation or mobile navigation
+- Keep important actions reachable
+- Support swipe interactions only when they are discoverable and accessible
+
+Do not hide critical functionality exclusively behind gestures.
+
+---
+
+# 39. DATA CONSISTENCY
+
+Consider race conditions.
+
+Example:
+
+A user opens the same task on two devices.
+
+Device A changes priority.
+
+Device B changes due date.
+
+The system should avoid accidentally overwriting unrelated changes.
+
+Use timestamps/version fields where appropriate.
+
+Consider optimistic concurrency control for important resources.
+
+---
+
+# 40. IDEMPOTENCY
+
+Operations that can be retried must not create duplicate effects.
+
+Examples:
+
+- Creating recurring task instances
+- Sending reminders
+- Processing exports
+- Uploading files
+
+Use idempotency keys or deterministic identifiers where appropriate.
+
+---
+
+# 41. RATE LIMITING
+
+Protect endpoints against abuse.
+
+Rate-limit at minimum:
+
+- Login
+- Password reset
+- Account creation
+- Email verification
+- Expensive search/export operations
+
+Don't apply overly aggressive limits to normal task interactions.
+
+---
+
+# 42. DOCUMENTATION
+
+Create documentation covering:
+
+- Local development
+- Environment variables
+- Database setup
+- Migrations
+- Running tests
+- Running frontend
+- Running backend
+- Background workers
+- Deployment
+- Architecture
+- API
+- Authentication
+- Important design decisions
+
+Include a README with exact setup commands.
+
+---
+
+# 43. ENVIRONMENT CONFIGURATION
+
+Never hard-code:
+
+- Database credentials
+- API keys
+- JWT secrets
+- OAuth secrets
+- Storage credentials
+
+Use environment variables or a secure secrets manager.
+
+Provide a safe `.env.example`.
+
+Never commit real secrets.
+
+---
+
+# 44. DEPLOYMENT
+
+The application should be deployable using a clearly documented process.
+
+Separate:
+
+- Development
+- Test
+- Production
+
+Production should use:
+
+- HTTPS
+- Secure environment variables
+- Database backups
+- Logging
+- Monitoring
+- Error tracking
+- Appropriate caching
+- Database migrations
+
+Document rollback considerations.
+
+---
+
+# 45. DEVELOPMENT APPROACH
+
+Do not build the entire application in one giant step.
+
+Implement in milestones.
+
+## Phase 1 — Foundation
+
+- Project setup
+- Database
+- Authentication
+- Basic layout
+- User profile
+
+## Phase 2 — Core tasks
+
+- Create task
+- Edit task
+- Complete task
+- Delete task
+- Restore task
+- Task list
+
+## Phase 3 — Organization
+
+- Projects
+- Priorities
+- Tags
+- Subtasks
+- Ordering
+
+## Phase 4 — Time management
+
+- Due dates
+- Timezones
+- Recurring tasks
+- Reminders
+
+## Phase 5 — Productivity
+
+- Search
+- Filtering
+- Sorting
+- Today
+- Upcoming
+- Overdue
+- Completed
+
+## Phase 6 — Reliability
+
+- Error handling
+- Optimistic UI
+- Offline handling
+- Synchronization
+- Undo
+- Recovery
+
+## Phase 7 — Advanced
+
+- Attachments
+- Activity history
+- Export
+- Collaboration architecture
+
+## Phase 8 — Production hardening
+
+- Security audit
+- Performance optimization
+- Automated testing
+- Observability
+- Accessibility audit
+- Deployment
+
+After each phase:
+
+1. Run tests.
+2. Check for regressions.
+3. Review database migrations.
+4. Review security.
+5. Review UX.
+6. Update documentation.
+
+---
+
+# 46. IMPORTANT ENGINEERING RULES
+
+Do not:
+
+- Hard-code user IDs
+- Trust client authorization
+- Store passwords in plaintext
+- Store secrets in source code
+- Store large files directly in the database
+- Create unnecessary microservices
+- Ignore timezone handling
+- Ignore accessibility
+- Ignore mobile UX
+- Delete important data permanently without considering recovery
+- Put business logic entirely in UI components
+- Create unbounded recurring tasks
+- Send notifications synchronously from normal API requests
+- Ignore race conditions
+- Ignore duplicate background-job execution
+- Return internal errors to users
+
+Prefer:
+
+- Clear domain boundaries
+- Strong typing
+- Server-side validation
+- Database constraints
+- Secure defaults
+- Automated tests
+- Small reusable components
+- Consistent API conventions
+- Observable background jobs
+- Simple architecture before premature complexity
+
+---
+
+# 47. DEFINITION OF DONE
+
+The application is not considered complete merely because the UI works.
+
+A feature is complete only when:
+
+- UI is implemented
+- Backend/API is implemented
+- Database model is correct
+- Authorization is implemented
+- Validation is implemented
+- Loading state exists
+- Empty state exists
+- Error state exists
+- Mobile behavior is handled
+- Accessibility is considered
+- Tests exist
+- Documentation is updated
+- Security implications are considered
+
+Before declaring the project complete, perform a final review for:
+
+- Security
+- Performance
+- Accessibility
+- Data integrity
+- Error handling
+- Mobile responsiveness
+- Test coverage
+- API consistency
+- Database indexing
+- Race conditions
+- Offline/network failure behavior
+- Background job reliability
+
+Do not claim a feature is implemented unless it actually works end-to-end.
+
+When making architectural decisions, explain the trade-offs briefly in the documentation.

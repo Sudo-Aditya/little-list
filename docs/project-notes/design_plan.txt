@@ -1,0 +1,30 @@
+Act as an expert UI/UX Designer, Senior Frontend Developer, and Accessibility (a11y) Specialist. Your task is to audit and redesign the provided website code/design concept to achieve absolute perfection, ensuring it is impeccably professional, fully responsive across all devices, free of any layout overlaps, and strictly minimalist.
+
+Please analyze the provided code/details and deliver a fully optimized, modern, and clean implementation based on the following requirements:
+
+### 1. Minimalist & Professional Aesthetics
+* Design Language: Clean, intentional, and clutter-free. Use generous whitespace (negative space) to let content breathe.
+* Typography: Establish a strict, proportional type scale using modern system font stacks or clean web fonts (e.g., Inter, SF Pro, Roboto). Ensure line heights (line-height: 1.5 to 1.6 for body) and font weights create a clear visual hierarchy.
+* Color Palette: Restraint is key. Use a professional, cohesive palette—typically a neutral background, a high-contrast text color, and a single intentional accent color for primary actions. Avoid random or clashing hues.
+* UI Elements: Sharp or subtly rounded corners (consistent border-radius, e.g., 6px or 8px), subtle and purposeful shadows (elevation), and sleek, modern borders.
+
+### 2. Flawless Fluid Responsiveness & Layout Stability
+* Mobile-First Architecture: Ensure the layout scales seamlessly from mobile devices (320px width) up to ultra-wide displays (1440px+).
+* Zero Overlaps / Breakage: Explicitly prevent text-wrapping issues, overflowing containers, or elements colliding at intermediate breakpoints. 
+* Modern CSS Layouts: Utilize modern CSS Grid and Flexbox with fluid units (clamp(), minmax(), vw/vh where appropriate) rather than rigid, brittle fixed widths.
+* Containers: Use responsive container max-widths with safe padding (e.g., padding-inline: 1rem to 2rem) so content never touches the screen edges on mobile.
+
+### 3. Technical & Code Cleanliness (If providing code)
+* Semantic HTML5: Use proper semantic tags (<header>, <main>, <section>, <article>, <footer>) for improved SEO and screen readers.
+* Modular CSS/Tailwind: Write clean, organized CSS (or use utility classes like Tailwind CSS). Eliminate redundant code, fixed height constraints on text containers, and absolute positioning hacks.
+* Performance & Accessibility: Ensure high contrast ratios (WCAG AA minimum), touch targets of at least 48x48px for mobile users, and scalable vector icons.
+
+### Context & Input Data
+* Target Audience: visitors
+* Core Vibe/Brand Tone: warm and organic
+* Current Code/Link/Wireframe: take from folder
+
+### Expected Output Format
+1. Design Critique: Briefly highlight what is currently causing visual clutter, responsiveness bugs, or overlaps.
+2. Improved Code: Provide the fully refactored, clean HTML/CSS (or Tailwind/Component code) implementing the fixes.
+3. Key Improvements: A quick bulleted summary of why these changes make the design look more professional, minimalist, and responsive.

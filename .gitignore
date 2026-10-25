@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.vercel/
+.continue/
+.playwright-mcp/
+test/ui-screenshots/
+
+# Vendored tooling and generated analysis (not part of the app)
+ui-ux-pro-max-skill/
+graphify-out/
+design-system/
+
+# Vendored skill bundles (tooling, not app code)
+.github/skills/
