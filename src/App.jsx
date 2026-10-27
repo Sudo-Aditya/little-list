@@ -8,7 +8,7 @@ import { getSubtaskProgress, groupVisibleTodos } from "./services/subtasks.js";
 import { classifyDueDate, dueDateFilters, dueDateViewBuckets, formatDueDate, getTodayKey, isMissingDueDateColumn, validateDueDate } from "./services/task-due-dates.js";
 import { nextRecurrenceDate } from "./services/recurrence.js";
 import { parseQuickAdd } from "./services/quick-add.js";
-import { chipColor, projectColor } from "./services/colors.js";
+import { chipColor, chipVars, projectColor } from "./services/colors.js";
 
 const filters = ["All", "Active", "Done", "Trash"];
 
@@ -886,7 +886,7 @@ function App() {
         <section className="auth-card">
           <a className="brand" href="/" aria-label="Little List home">
             <span className="brand-mark" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#fff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </span>
             <span>Little List</span>
           </a>
@@ -1072,10 +1072,9 @@ function App() {
               )}
               {(todo.tags ?? []).length > 0 && (
                 <div className="todo-tag-chips">
-                  {todo.tags.map((tag) => {
-                    const colors = chipColor(tag.id);
-                    return <span className="tag-chip" key={tag.id} style={{ color: colors.text, background: colors.tint }}>{tag.name}</span>;
-                  })}
+                  {todo.tags.map((tag) => (
+                    <span className="tag-chip" key={tag.id} style={chipVars(tag.id)}>{tag.name}</span>
+                  ))}
                 </div>
               )}
               {filter !== "Trash" && (
@@ -1151,7 +1150,7 @@ function App() {
         <aside className="sidebar" aria-label="Task navigation">
           <div className="sidebar-brand">
             <span className="brand-mark" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="15" height="15"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#fff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              <svg viewBox="0 0 24 24" width="15" height="15"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </span>
             <span>Little List</span>
           </div>
@@ -1285,7 +1284,6 @@ function App() {
                   {tags.length > 0 ? (
                     <ul className="tag-list">
                       {tags.map((tag) => {
-                        const colors = chipColor(tag.id);
                         return (
                           <li key={tag.id} className="tag-row">
                             {editingTagId === tag.id ? (
@@ -1296,7 +1294,7 @@ function App() {
                               </form>
                             ) : (
                               <>
-                                <span className="tag-chip" style={{ color: colors.text, background: colors.tint }}>{tag.name}</span>
+                                <span className="tag-chip" style={chipVars(tag.id)}>{tag.name}</span>
                                 <div className="tag-row-actions">
                                   <button className="todo-action-button" type="button" disabled={busy} onClick={() => { setEditingTagId(tag.id); setEditingTagName(tag.name); }}>Rename</button>
                                   <button className="todo-action-button project-delete-button" type="button" disabled={busy} onClick={() => deleteTag(tag)}>Delete</button>
