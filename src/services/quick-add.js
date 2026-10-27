@@ -66,11 +66,12 @@ export function parseQuickAdd(text, { projects = [], tags = [], parseDates = tru
     return match;
   });
 
-  // Priority: standalone p1–p4 tokens (case-insensitive), but never a
-  // project/tag token such as "#P1" or "@p2".
-  working = working.replace(/(?<![#@\w])p([1-4])\b/gi, (match, level) => {
+  // Priority: standalone p1–p4 tokens (case-insensitive). The prefix capture
+  // excludes "#p1"/"@p1" (project/tag tokens) without a lookbehind — regex
+  // lookbehind is a hard parse error on Safari < 16.4 (BF-01).
+  working = working.replace(/(^|[^#@\w])p([1-4])\b/gi, (match, prefix, level) => {
     parsed.priority = PRIORITY_TOKENS["p" + level.toLowerCase()];
-    return " ";
+    return `${prefix} `;
   });
 
   // Date phrases. Only the first date token is consumed; later ones stay in

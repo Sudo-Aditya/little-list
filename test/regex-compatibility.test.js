@@ -20,10 +20,10 @@ function collectJsFiles(dir) {
   return out;
 }
 
-// Known offender until fixed (BF-01): quick-add.js:71 lookbehind.
-const WHITELIST = [
-  { file: /quick-add\.js$/, pattern: /\(\?<!/, finding: "BF-01", note: "lookbehind breaks Safari<16.4/Firefox<78 — refactor pending" },
-];
+// BF-01 (quick-add.js lookbehind) was fixed: the priority token now uses a
+// prefix-capture group instead. The whitelist is empty and kept as the
+// escape hatch for any future finding; the guard below asserts src/ stays clean.
+const WHITELIST = [];
 
 const FORBIDDEN = [
   { pattern: /\(\?<[=!]/, name: "lookbehind assertion ((?<= / (?<!)" },
@@ -54,9 +54,8 @@ test("no regex constructs beyond the ES2018-compat budget ship in src/ (BF-01 gu
   );
 });
 
-test("BF-01 remains whitelisted and documented (remove this entry when fixed)", () => {
+test("BF-01 stays fixed: quick-add.js keeps its lookbehind-free priority regex", () => {
   const source = readFileSync(join(srcDir, "services", "quick-add.js"), "utf8");
-  const whitelisted = WHITELIST.find((w) => w.file.test("services/quick-add.js"));
-  assert.ok(whitelisted, "whitelist entry for quick-add.js missing");
-  assert.match(source, new RegExp(whitelisted.pattern), "BF-01 lookbehind no longer present — update the whitelist and close the finding!");
+  assert.doesNotMatch(source, /\(\?<!/, "BF-01 regressed: a lookbehind is back in quick-add.js — restore the prefix-capture form or re-whitelist with a finding ID");
+  assert.match(source, /\(\^\|\[\^#@\\w\]\)p\(\[1-4\]\)\\b/, "the prefix-capture priority regex that replaced the lookbehind is missing");
 });

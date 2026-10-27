@@ -75,6 +75,20 @@ test("@p2 stays a tag reference, not a priority token", () => {
   assert.equal(parsed.priority, null);
 });
 
+test("#p1 stays a project reference, not a priority token", () => {
+  const parsed = parseQuickAdd("Ship it #p1", { projects: [{ name: "p1" }], todayKey: TODAY });
+  assert.equal(parsed.projectName, "p1");
+  assert.equal(parsed.priority, null);
+});
+
+test("letters glued to a priority token keep it out of the title parse (BF-01 rewrite guard)", () => {
+  // The lookbehind replacement must not loosen the exclusion: "abcp2" is one
+  // word, not "abc" + priority p2.
+  const parsed = parseQuickAdd("abcp2", { todayKey: TODAY });
+  assert.equal(parsed.priority, null);
+  assert.equal(parsed.title, "abcp2");
+});
+
 test("date phrases stay in the title when date parsing is off", () => {
   const parsed = parseQuickAdd("File taxes tomorrow", { todayKey: TODAY, parseDates: false });
   assert.equal(parsed.dueDateKey, null);
