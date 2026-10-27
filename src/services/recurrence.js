@@ -76,3 +76,18 @@ export function nextRecurrenceDate(phrase, baseKey) {
   const offset = ((target - base.getDay()) + 7) % 7 || 7;
   return addDaysToKey(baseKey, offset);
 }
+
+// C-06 (data-corruption-analysis.md): completing a recurring task spawns its
+// next occurrence client-side, so complete→uncheck→complete would spawn a
+// second identical one. A spawn is redundant when a live occurrence with the
+// same title, rule, and due date already exists (the trashed one doesn't
+// count — deleting it was a deliberate choice).
+export function hasLiveOccurrence(todos, { title, recurrence, dueDateKey }, excludeId = null) {
+  return todos.some((todo) =>
+    todo.id !== excludeId
+    && todo.deleted_at === null
+    && todo.title === title
+    && todo.recurrence === recurrence
+    && todo.due_date === dueDateKey
+  );
+}

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { nextRecurrenceDate, parseRecurrence } from "../src/services/recurrence.js";
+import { hasLiveOccurrence, nextRecurrenceDate, parseRecurrence } from "../src/services/recurrence.js";
 
 test("parseRecurrence normalizes unit phrases", () => {
   assert.deepEqual(parseRecurrence("Water the plants every day"), { recurrence: "every day", matchLength: 9 });
@@ -53,4 +53,25 @@ test("weekday phrases are strictly after the base day", () => {
 test("unknown phrases return null instead of guessing", () => {
   assert.equal(nextRecurrenceDate("every fortnight", "2026-10-24"), null);
   assert.equal(nextRecurrenceDate("", "2026-10-24"), null);
+});
+
+test("hasLiveOccurrence detects an already-spawned occurrence (C-06)", () => {
+  const todos = [
+    { id: "a", title: "Water plants", recurrence: "every week", due_date: "2026-11-06", deleted_at: null },
+    { id: "b", title: "Water plants", recurrence: "every week", due_date: "2026-11-13", deleted_at: null },
+  ];
+  const spawn = { title: "Water plants", recurrence: "every week", dueDateKey: "2026-11-13" };
+  assert.equal(hasLiveOccurrence(todos, spawn, "a"), true);
+});
+
+test("hasLiveOccurrence ignores trashed, different, and self rows", () => {
+  const spawn = { title: "Water plants", recurrence: "every week", dueDateKey: "2026-11-13" };
+  const trashed = [{ id: "b", title: "Water plants", recurrence: "every week", due_date: "2026-11-13", deleted_at: "2026-10-27T00:00:00Z" }];
+  const differentDate = [{ id: "b", title: "Water plants", recurrence: "every week", due_date: "2026-11-20", deleted_at: null }];
+  const differentTitle = [{ id: "b", title: "Water the fern", recurrence: "every week", due_date: "2026-11-13", deleted_at: null }];
+  const self = [{ id: "a", title: "Water plants", recurrence: "every week", due_date: "2026-11-13", deleted_at: null }];
+  assert.equal(hasLiveOccurrence(trashed, spawn, "a"), false);
+  assert.equal(hasLiveOccurrence(differentDate, spawn, "a"), false);
+  assert.equal(hasLiveOccurrence(differentTitle, spawn, "a"), false);
+  assert.equal(hasLiveOccurrence(self, spawn, "a"), false);
 });

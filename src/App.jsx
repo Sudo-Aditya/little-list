@@ -6,8 +6,9 @@ import { moveProject, validateProjectName } from "./services/projects.js";
 import { validateTagName } from "./services/tags.js";
 import { getSubtaskProgress, groupVisibleTodos } from "./services/subtasks.js";
 import { classifyDueDate, dueDateFilters, dueDateViewBuckets, formatDueDate, getTodayKey, isMissingDueDateColumn, validateDueDate } from "./services/task-due-dates.js";
-import { nextRecurrenceDate } from "./services/recurrence.js";
+import { hasLiveOccurrence, nextRecurrenceDate } from "./services/recurrence.js";
 import { parseQuickAdd } from "./services/quick-add.js";
+import { friendlyError } from "./services/error-mapping.js";
 import { chipColor, chipVars, projectColor } from "./services/colors.js";
 
 const filters = ["All", "Active", "Done", "Trash"];
@@ -22,24 +23,27 @@ const dueFilterLabels = {
 const TODO_COLUMN_SETS = [
   {
     name: "full",
-    columns: "id, title, completed, created_at, deleted_at, priority, project_id, parent_task_id, due_date, description, recurrence",
+    columns: "id, title, completed, created_at, deleted_at, priority, project_id, parent_task_id, due_date, description, recurrence, updated_at",
     dueDates: true,
     descriptions: true,
     recurrences: true,
+    occ: true,
   },
   {
     name: "due-and-description",
-    columns: "id, title, completed, created_at, deleted_at, priority, project_id, parent_task_id, due_date, description",
+    columns: "id, title, completed, created_at, deleted_at, priority, project_id, parent_task_id, due_date, description, updated_at",
     dueDates: true,
     descriptions: true,
     recurrences: false,
+    occ: true,
   },
   {
     name: "with-due-date",
-    columns: "id, title, completed, created_at, deleted_at, priority, project_id, parent_task_id, due_date",
+    columns: "id, title, completed, created_at, deleted_at, priority, project_id, parent_task_id, due_date, updated_at",
     dueDates: true,
     descriptions: false,
     recurrences: false,
+    occ: true,
   },
   {
     name: "base",
@@ -47,6 +51,7 @@ const TODO_COLUMN_SETS = [
     dueDates: false,
     descriptions: false,
     recurrences: false,
+    occ: false,
   },
 ];
 
@@ -91,18 +96,45 @@ function App() {
   const [dueDatesSupported, setDueDatesSupported] = useState(true);
   const [descriptionsSupported, setDescriptionsSupported] = useState(true);
   const [recurrencesSupported, setRecurrencesSupported] = useState(true);
+  const [occSupported, setOccSupported] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const todoColumns = [
     "id, title, completed, created_at, deleted_at, priority, project_id, parent_task_id",
     dueDatesSupported ? "due_date" : null,
     descriptionsSupported ? "description" : null,
     recurrencesSupported ? "recurrence" : null,
+    occSupported ? "updated_at" : null,
   ].filter(Boolean).join(", ");
   const [busy, setBusy] = useState(false);
   const [signOutBusy, setSignOutBusy] = useState(false);
   const [signOutError, setSignOutError] = useState("");
   const [pendingTodoIds, setPendingTodoIds] = useState([]);
   const [listError, setListError] = useState("");
+  const [announcement, setAnnouncement] = useState("");
+  const taskModalRef = useRef(null);
+  const addTriggerRef = useRef(null);
+
+  // A11Y-DIS-01: the <details>-based popovers (tag picker, due picker, manage
+  // menus) must be dismissable with Escape like any other overlay.
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key !== "Escape") return;
+      const details = event.target instanceof Element ? event.target.closest("details") : null;
+      if (details) details.open = false;
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  function closeAddModal() {
+    setShowAddModal(false);
+    setTask("");
+    setTaskDescription("");
+    // A11Y-KB-02: hand focus back to the control that opened the dialog
+    // instead of dropping it on <body>.
+    addTriggerRef.current?.focus();
+    addTriggerRef.current = null;
+  }
 
   useEffect(() => {
     if (!openManageMenu) return undefined;
@@ -154,7 +186,7 @@ function App() {
 
     supabase.auth.getSession().then(({ data, error }) => {
       if (!active) return;
-      if (error) setAuthError(error.message);
+      if (error) setAuthError(friendlyError(error));
       setSession(data.session);
       setAuthReady(true);
     });
@@ -203,6 +235,7 @@ function App() {
         setDueDatesSupported(appliedSet.dueDates);
         setDescriptionsSupported(appliedSet.descriptions);
         setRecurrencesSupported(Boolean(appliedSet.recurrences));
+        setOccSupported(Boolean(appliedSet.occ));
       }
       return result;
     };
@@ -225,7 +258,7 @@ function App() {
       if (!active) return;
       const loadErrors = [todoResult, projectResult, tagResult, todoTagResult]
         .filter((result) => result.error)
-        .map((result) => result.error.message);
+        .map((result) => friendlyError(result.error));
       if (loadErrors.length > 0) setListError(loadErrors.join(" "));
       if (projectResult.error) setProjects([]);
       else setProjects(projectResult.data ?? []);
@@ -281,7 +314,7 @@ function App() {
 
     setBusy(false);
     if (result.error) {
-      setAuthError(result.error.message);
+      setAuthError(friendlyError(result.error));
       return;
     }
     if (authMode === "signup" && !result.data.session) {
@@ -338,7 +371,7 @@ function App() {
         .select(todoColumns)
         .single();
       if (error) {
-        setListError(error.message);
+        setListError(friendlyError(error));
         return;
       }
       let assignedTags = [];
@@ -355,18 +388,16 @@ function App() {
           tagError = error;
         }
         if (tagError) {
-          const message = tagError instanceof Error ? tagError.message : "Check your connection and try again.";
-          setListError(`Task created, but its tag could not be assigned: ${message}`);
+          setListError(`Task created, but its tag could not be assigned: ${friendlyError(tagError)}`);
         } else {
           assignedTags = [selectedTagForTask];
         }
       }
       setTodos((current) => [{ ...data, tags: assignedTags }, ...current]);
-      setTask("");
-      setTaskDescription("");
-      setShowAddModal(false);
-    } catch {
-      setListError("Unable to add this task. Check your connection and try again.");
+      setAnnouncement("Task added.");
+      closeAddModal();
+    } catch (error) {
+      setListError(`Unable to add this task. ${friendlyError(error)}`);
     } finally {
       setBusy(false);
     }
@@ -395,7 +426,7 @@ function App() {
         .select(todoColumns)
         .single();
       if (error) {
-        setListError(error.message);
+        setListError(friendlyError(error));
         return;
       }
       let assignedTags = [];
@@ -413,17 +444,17 @@ function App() {
           tagError = error;
         }
         if (tagError) {
-          const message = tagError instanceof Error ? tagError.message : "Check your connection and try again.";
-          setListError(`Subtask created, but its tags could not be inherited: ${message}`);
+          setListError(`Subtask created, but its tags could not be inherited: ${friendlyError(tagError)}`);
         } else {
           assignedTags = parentTodo.tags;
         }
       }
       setTodos((current) => [{ ...data, tags: assignedTags }, ...current]);
+      setAnnouncement("Subtask added.");
       setSubtaskParentId(null);
       setSubtaskTitle("");
-    } catch {
-      setListError("Unable to add this subtask. Check your connection and try again.");
+    } catch (error) {
+      setListError(`Unable to add this subtask. ${friendlyError(error)}`);
     } finally {
       setBusy(false);
     }
@@ -445,14 +476,14 @@ function App() {
         .select("id, name, position, is_archived")
         .single();
       if (error) {
-        setListError(error.message);
+        setListError(friendlyError(error));
         return;
       }
       setProjects((current) => [...current, data]);
       setProjectFilter(data.id);
       setProjectName("");
-    } catch {
-      setListError("Unable to create this project. Check your connection and try again.");
+    } catch (error) {
+      setListError(`Unable to create this project. ${friendlyError(error)}`);
     } finally {
       setBusy(false);
     }
@@ -475,13 +506,13 @@ function App() {
         .select("id, name")
         .single();
       if (error) {
-        setListError(error.message);
+        setListError(friendlyError(error));
         return;
       }
       setTags((current) => [...current, data]);
       setTagName("");
-    } catch {
-      setListError("Unable to create this tag. Check your connection and try again.");
+    } catch (error) {
+      setListError(`Unable to create this tag. ${friendlyError(error)}`);
     } finally {
       setBusy(false);
     }
@@ -518,8 +549,8 @@ function App() {
         tags: (todo.tags ?? []).map((item) => item.id === data.id ? data : item),
       })));
       setEditingTagId(null);
-    } catch {
-      setListError("Unable to rename this tag. Check your connection and try again.");
+    } catch (error) {
+      setListError(`Unable to rename this tag. ${friendlyError(error)}`);
     } finally {
       setBusy(false);
     }
@@ -533,7 +564,7 @@ function App() {
     try {
       const { error } = await supabase.from("tags").delete().eq("id", tag.id);
       if (error) {
-        setListError(error.message);
+        setListError(friendlyError(error));
         return;
       }
       setTags((current) => current.filter((item) => item.id !== tag.id));
@@ -543,8 +574,8 @@ function App() {
       })));
       if (tagFilter === tag.id) setTagFilter("all");
       if (editingTagId === tag.id) setEditingTagId(null);
-    } catch {
-      setListError("Unable to delete this tag. Check your connection and try again.");
+    } catch (error) {
+      setListError(`Unable to delete this tag. ${friendlyError(error)}`);
     } finally {
       setBusy(false);
     }
@@ -565,7 +596,7 @@ function App() {
           tag_id: tag.id,
         });
       if (result.error) {
-        setListError(result.error.message);
+        setListError(friendlyError(result.error));
         return;
       }
       setTodos((current) => current.map((item) => item.id === todo.id
@@ -576,8 +607,8 @@ function App() {
             : [...(item.tags ?? []), tag],
         }
         : item));
-    } catch {
-      setListError("Unable to update this task's tags. Check your connection and try again.");
+    } catch (error) {
+      setListError(`Unable to update this task's tags. ${friendlyError(error)}`);
     } finally {
       setPendingTodoIds((current) => current.filter((id) => id !== todo.id));
     }
@@ -610,8 +641,8 @@ function App() {
       }
       setProjects((current) => current.map((item) => item.id === data.id ? data : item));
       setEditingProjectId(null);
-    } catch {
-      setListError("Unable to rename this project. Check your connection and try again.");
+    } catch (error) {
+      setListError(`Unable to rename this project. ${friendlyError(error)}`);
     } finally {
       setBusy(false);
     }
@@ -628,13 +659,13 @@ function App() {
         .select("id, name, position, is_archived")
         .single();
       if (error) {
-        setListError(error.message);
+        setListError(friendlyError(error));
         return;
       }
       setProjects((current) => current.map((item) => item.id === data.id ? data : item));
       if (isArchived && projectFilter === project.id) setProjectFilter("all");
-    } catch {
-      setListError("Unable to update this project. Check your connection and try again.");
+    } catch (error) {
+      setListError(`Unable to update this project. ${friendlyError(error)}`);
     } finally {
       setBusy(false);
     }
@@ -648,14 +679,14 @@ function App() {
     try {
       const { error } = await supabase.from("projects").delete().eq("id", project.id);
       if (error) {
-        setListError(error.message);
+        setListError(friendlyError(error));
         return;
       }
       setProjects((current) => current.filter((item) => item.id !== project.id));
       setTodos((current) => current.map((todo) => todo.project_id === project.id ? { ...todo, project_id: null } : todo));
       if (projectFilter === project.id) setProjectFilter("all");
-    } catch {
-      setListError("Unable to delete this project. Check your connection and try again.");
+    } catch (error) {
+      setListError(`Unable to delete this project. ${friendlyError(error)}`);
     } finally {
       setBusy(false);
     }
@@ -674,12 +705,12 @@ function App() {
       )));
       const failedUpdate = updates.find(({ error }) => error);
       if (failedUpdate) {
-        setListError(failedUpdate.error.message);
+        setListError(friendlyError(failedUpdate.error));
         const { data, error } = await supabase.from("projects")
           .select("id, name, position, is_archived")
           .order("position")
           .order("created_at");
-        if (error) setListError(`${failedUpdate.error.message} Could not refresh project order: ${error.message}`);
+        if (error) setListError(`${friendlyError(failedUpdate.error)} Could not refresh project order: ${friendlyError(error)}`);
         else setProjects(data ?? []);
         return;
       }
@@ -687,8 +718,8 @@ function App() {
       setProjects((current) => current
         .map((item) => positions.has(item.id) ? { ...item, position: positions.get(item.id) } : item)
         .sort((left, right) => left.position - right.position));
-    } catch {
-      setListError("Unable to reorder projects. Check your connection and try again.");
+    } catch (error) {
+      setListError(`Unable to reorder projects. ${friendlyError(error)}`);
     } finally {
       setBusy(false);
     }
@@ -699,20 +730,40 @@ function App() {
     setPendingTodoIds((current) => [...current, todo.id]);
     setListError("");
     try {
-      const { data, error } = await supabase
+      // C-09 (data-corruption-analysis.md): when the server exposes
+      // updated_at, refuse to overwrite a row another device changed since we
+      // loaded it — last-write-wins silently dropped edits. Without the
+      // column (pre-migration), updates behave exactly as before.
+      const query = supabase
         .from("todos")
         .update(changes)
-        .eq("id", todo.id)
-        .select(todoColumns)
-        .single();
+        .eq("id", todo.id);
+      if (occSupported && todo.updated_at) query.eq("updated_at", todo.updated_at);
+      const { data, error } = await query.select(todoColumns).maybeSingle();
       if (error) {
-        setListError(error.message);
+        setListError(friendlyError(error));
+        return false;
+      }
+      if (!data) {
+        // No row matched id + updated_at: the task changed elsewhere.
+        // Pull the fresh copy so the user sees what won (and can re-apply).
+        const { data: fresh, error: freshError } = await supabase
+          .from("todos")
+          .select(todoColumns)
+          .eq("id", todo.id)
+          .maybeSingle();
+        if (freshError || !fresh) {
+          setListError("This task changed on another device and could not be reloaded. Refresh the page.");
+          return false;
+        }
+        setTodos((current) => current.map((item) => item.id === todo.id ? { ...fresh, tags: item.tags ?? [] } : item));
+        setListError("This task was changed on another device. Your copy is refreshed — apply your change again if you still want it.");
         return false;
       }
       setTodos((current) => current.map((item) => item.id === todo.id ? { ...data, tags: item.tags ?? [] } : item));
       return true;
-    } catch {
-      setListError("Unable to save this task. Check your connection and try again.");
+    } catch (error) {
+      setListError(`Unable to save this task. ${friendlyError(error)}`);
       return false;
     } finally {
       setPendingTodoIds((current) => current.filter((id) => id !== todo.id));
@@ -730,12 +781,17 @@ function App() {
 
   async function completeTodo(todo, completed) {
     const ok = await updateTodo(todo, { completed });
-    if (!ok || !completed) return;
+    if (!ok) return;
+    setAnnouncement(completed ? "Task marked as done." : "Task reopened.");
     // Completing a recurring task spawns its next occurrence with the same
     // fields, tags included; the completed occurrence stays in Done.
+    if (!completed) return;
     if (!recurrencesSupported || !dueDatesSupported || !todo.recurrence) return;
     const nextKey = nextRecurrenceDate(todo.recurrence, todo.due_date ?? getTodayKey());
     if (!nextKey) return;
+    // C-06: skip the spawn when this occurrence already exists live — e.g.
+    // the task was completed, unchecked, and completed again.
+    if (hasLiveOccurrence(todos, { title: todo.title, recurrence: todo.recurrence, dueDateKey: nextKey }, todo.id)) return;
     try {
       const { data, error } = await supabase
         .from("todos")
@@ -752,7 +808,7 @@ function App() {
         .select(todoColumns)
         .single();
       if (error) {
-        setListError(`Task completed, but its next occurrence couldn't be created: ${error.message}`);
+        setListError(`Task completed, but its next occurrence couldn't be created: ${friendlyError(error)}`);
         return;
       }
       let spawnedTags = [];
@@ -767,8 +823,8 @@ function App() {
         }
       }
       setTodos((current) => [{ ...data, tags: spawnedTags }, ...current]);
-    } catch {
-      setListError("Task completed, but its next occurrence couldn't be created. Check your connection and try again.");
+    } catch (error) {
+      setListError(`Task completed, but its next occurrence couldn't be created. ${friendlyError(error)}`);
     }
   }
 
@@ -813,15 +869,16 @@ function App() {
       try {
         const { error } = await supabase.from("todos").delete().eq("id", todo.id);
         if (error) {
-          setListError(error.message);
+          setListError(friendlyError(error));
           return;
         }
         setTodos((current) => current
           .filter((item) => item.id !== todo.id)
           .map((item) => item.parent_task_id === todo.id ? { ...item, parent_task_id: null } : item));
+        setAnnouncement("Task permanently deleted.");
         if (undoTodoId === todo.id) setUndoTodoId(null);
-      } catch {
-        setListError("Unable to permanently delete this task. Check your connection and try again.");
+      } catch (error) {
+        setListError(`Unable to permanently delete this task. ${friendlyError(error)}`);
       } finally {
         setPendingTodoIds((current) => current.filter((id) => id !== todo.id));
       }
@@ -829,13 +886,26 @@ function App() {
     }
 
     const updated = await updateTodo(todo, { deleted_at: new Date().toISOString() });
-    if (updated) setUndoTodoId(todo.id);
+    if (updated) {
+      setUndoTodoId(todo.id);
+      setAnnouncement("Task moved to Trash.");
+    }
   }
 
   async function restoreTodo(todo) {
-    if (await updateTodo(todo, { deleted_at: null })) {
-      if (undoTodoId === todo.id) setUndoTodoId(null);
+    // C-05 (data-corruption-analysis.md): restoring a parent brings its
+    // trashed children back too, so no active task is left with children
+    // stranded invisible in Trash.
+    const trashedChildren = todo.parent_task_id === null
+      ? todos.filter((item) => item.parent_task_id === todo.id && item.deleted_at !== null)
+      : [];
+    const restored = await updateTodo(todo, { deleted_at: null });
+    if (!restored) return;
+    setAnnouncement(trashedChildren.length > 0 ? "Task restored, including its subtasks." : "Task restored.");
+    for (const child of trashedChildren) {
+      await updateTodo(child, { deleted_at: null });
     }
+    if (undoTodoId === todo.id) setUndoTodoId(null);
   }
 
   async function undoDelete() {
@@ -854,9 +924,9 @@ function App() {
     setSignOutError("");
     try {
       const { error } = await supabase.auth.signOut({ scope: "local" });
-      if (error) setSignOutError(error.message);
+      if (error) setSignOutError(friendlyError(error));
     } catch (error) {
-      setSignOutError(error instanceof Error ? error.message : "Unable to sign out. Please try again.");
+      setSignOutError(friendlyError(error));
     } finally {
       setSignOutBusy(false);
     }
@@ -898,10 +968,10 @@ function App() {
           </p>
           <form className="auth-form" onSubmit={handleAuthSubmit} aria-busy={busy}>
             <label htmlFor="email">Email address</label>
-            <input id="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} required />
+            <input id="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} required aria-describedby={authError ? "auth-error" : undefined} aria-invalid={authError ? true : undefined} />
             <label htmlFor="password">Password</label>
             <div className="password-field">
-              <input id="password" type={showPassword ? "text" : "password"} autoComplete={authMode === "login" ? "current-password" : "new-password"} placeholder="At least 6 characters" minLength="6" value={password} onChange={(event) => setPassword(event.target.value)} required />
+              <input id="password" type={showPassword ? "text" : "password"} autoComplete={authMode === "login" ? "current-password" : "new-password"} placeholder="At least 6 characters" minLength="6" value={password} onChange={(event) => setPassword(event.target.value)} required aria-describedby={authError ? "auth-error" : undefined} aria-invalid={authError ? true : undefined} />
               <button
                 className="password-toggle"
                 type="button"
@@ -919,7 +989,7 @@ function App() {
                 </svg>
               </button>
             </div>
-            {authError && <p className="notice error" role="alert">{authError}</p>}
+            {authError && <p className="notice error" role="alert" id="auth-error">{authError}</p>}
             {authMessage && <p className="notice success" role="status">{authMessage}</p>}
             <button className="primary-button auth-submit" type="submit" disabled={busy}>
               {busy ? "One moment…" : authMode === "login" ? "Log in" : "Sign up"}
@@ -1146,6 +1216,7 @@ function App() {
 
   return (
     <main className="app-screen">
+      <a className="skip-link" href="#task-list">Skip to task list</a>
       <div className="workspace">
         <aside className="sidebar" aria-label="Task navigation">
           <div className="sidebar-brand">
@@ -1154,7 +1225,7 @@ function App() {
             </span>
             <span>Little List</span>
           </div>
-          <button className="sidebar-add-button" type="button" aria-haspopup="dialog" onClick={() => setShowAddModal(true)}>
+          <button className="sidebar-add-button" type="button" aria-haspopup="dialog" onClick={(event) => { addTriggerRef.current = event.currentTarget; setShowAddModal(true); }}>
             <span aria-hidden="true">+</span> Add task
           </button>
           <div className="sidebar-search">
@@ -1216,7 +1287,7 @@ function App() {
 
           <section className="sidebar-section" aria-label="Projects">
             <div className="sidebar-section-heading">
-              <h2>Projects</h2>
+              <p className="sidebar-section-title">Projects</p>
               <details ref={(node) => { manageMenuRefs.current.projects = node; }} className="sidebar-manage-menu" open={openManageMenu === "projects"} onToggle={(event) => handleManageMenuToggle("projects", event)}>
                 <summary aria-label="Manage projects">···</summary>
                 <div className="sidebar-manage-popover" style={{ "--manage-menu-left": `${manageMenuPosition.left}px`, "--manage-menu-top": `${manageMenuPosition.top}px` }}>
@@ -1272,7 +1343,7 @@ function App() {
 
           <section className="sidebar-section sidebar-tag-section" aria-label="Tags">
             <div className="sidebar-section-heading">
-              <h2>Tags</h2>
+              <p className="sidebar-section-title">Tags</p>
               <details ref={(node) => { manageMenuRefs.current.tags = node; }} className="sidebar-manage-menu" open={openManageMenu === "tags"} onToggle={(event) => handleManageMenuToggle("tags", event)}>
                 <summary aria-label="Manage tags">···</summary>
                 <div className="sidebar-manage-popover tag-manage-popover" style={{ "--manage-menu-left": `${manageMenuPosition.left}px`, "--manage-menu-top": `${manageMenuPosition.top}px` }}>
@@ -1323,7 +1394,7 @@ function App() {
           </div>
         </aside>
 
-        <section className="list-shell">
+        <section className="list-shell" id="task-list">
           {signOutError && <p className="notice error list-notice" role="alert">{signOutError}</p>}
           <div className="list-heading">
             <div>
@@ -1378,7 +1449,7 @@ function App() {
             <h2>{searching ? "No results." : filter === "Trash" ? "Trash is empty." : isInboxView ? "No tasks yet" : filter === "Active" ? "Nothing left to do." : filter === "Done" ? "No completed tasks yet." : "Nothing here."}</h2>
             <p>{searching ? `Nothing matches "${searchQuery.trim()}".` : filter === "Trash" ? "Deleted tasks stay here so you can restore them." : isInboxView ? "Add a task with the button on the left." : "Try another view."}</p>
             {isInboxView && !searching && filter !== "Trash" && (
-              <button className="primary-button empty-add-button" type="button" onClick={() => setShowAddModal(true)}>
+              <button className="primary-button empty-add-button" type="button" onClick={(event) => { addTriggerRef.current = event.currentTarget; setShowAddModal(true); }}>
                 Add task
               </button>
             )}
@@ -1429,18 +1500,39 @@ function App() {
       </section>
       </div>
 
+      <p className="visually-hidden" role="status">{announcement}</p>
+
       {showAddModal && (
         <div
           className="modal-backdrop"
           onClick={(event) => {
             if (event.target === event.currentTarget) {
-              setShowAddModal(false);
-              setTask("");
-              setTaskDescription("");
+              closeAddModal();
             }
           }}
         >
-          <div className="task-modal" role="dialog" aria-modal="true" aria-label="Add a task">
+          <div
+            className="task-modal"
+            ref={taskModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Add a task"
+            onKeyDown={(event) => {
+              // A11Y-KB-01: keep Tab cycling inside the dialog while it is open.
+              if (event.key !== "Tab" || !taskModalRef.current) return;
+              const focusables = taskModalRef.current.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])');
+              if (focusables.length === 0) return;
+              const first = focusables[0];
+              const last = focusables[focusables.length - 1];
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+              }
+            }}
+          >
             <form onSubmit={addTodo}>
               <input
                 className="task-modal-title"
@@ -1451,11 +1543,7 @@ function App() {
                 value={task}
                 onChange={(event) => setTask(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    setShowAddModal(false);
-                    setTask("");
-                    setTaskDescription("");
-                  }
+                  if (event.key === "Escape") closeAddModal();
                 }}
               />
               <input
@@ -1466,11 +1554,7 @@ function App() {
                 value={taskDescription}
                 onChange={(event) => setTaskDescription(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    setShowAddModal(false);
-                    setTask("");
-                    setTaskDescription("");
-                  }
+                  if (event.key === "Escape") closeAddModal();
                 }}
               />
               {modalParsedChips.length > 0 && (
@@ -1485,7 +1569,7 @@ function App() {
                 <button
                   className="todo-action-button"
                   type="button"
-                  onClick={() => { setShowAddModal(false); setTask(""); setTaskDescription(""); }}
+                  onClick={closeAddModal}
                 >
                   Cancel
                 </button>

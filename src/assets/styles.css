@@ -154,7 +154,10 @@
 }
 
 * { box-sizing: border-box; }
-body { min-width: 320px; min-height: 100vh; margin: 0; }
+/* No min-width on body: at a 320px window the vertical scrollbar leaves only
+   ~305px visible, and a 320px min-width would force a horizontal scroll
+   (A11Y-ZM-01 / BF-09). */
+body { min-height: 100vh; margin: 0; }
 button, input { font: inherit; }
 button { cursor: pointer; }
 button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible, a:focus-visible { outline: var(--focus-width) solid var(--focus-ring); outline-offset: var(--focus-offset); }
@@ -234,7 +237,7 @@ code { padding: 2px 5px; border-radius: var(--radius-sm); background: var(--hove
 .sidebar-count { margin-left: auto; color: var(--muted); font-size: var(--text-xs); font-weight: 400; }
 .sidebar-section { margin-top: 25px; }
 .sidebar-section-heading { display: flex; align-items: center; justify-content: space-between; padding: 0 9px 5px; }
-.sidebar-section-heading h2 { margin: 0; color: var(--faint); font-size: var(--text-xs); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; }
+.sidebar-section-heading .sidebar-section-title { margin: 0; color: var(--faint); font-size: var(--text-xs); font-weight: 700; letter-spacing: var(--tracking-caps); text-transform: uppercase; }
 .sidebar-manage-menu { position: relative; }
 .sidebar-manage-menu > summary { width: 25px; height: 24px; display: grid; place-items: center; border-radius: var(--radius-0); color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; list-style: none; }
 .sidebar-manage-menu > summary::-webkit-details-marker { display: none; }
@@ -354,6 +357,13 @@ code { padding: 2px 5px; border-radius: var(--radius-sm); background: var(--hove
 .project-row-name, .project-list-empty, .subtask-progress, .tag-sidebar-mark,
 .todo-tag-picker, .tag-picker-empty, .todo-due-picker { color: var(--muted); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+.skip-link { position: absolute; left: -9999px; top: 0; z-index: 60; padding: 10px 14px; border: 1px solid var(--line-strong); background: var(--surface-raised); color: var(--text); font-size: var(--text-sm); font-weight: 600; }
+.skip-link:focus-visible { left: 8px; top: 8px; }
+.error-boundary { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: var(--space-3); padding: var(--space-5); text-align: center; background: var(--bg); color: var(--text); }
+.error-boundary h1 { margin: 0; font-size: var(--text-h1); letter-spacing: var(--tracking-tight); }
+.error-boundary p { margin: 0; color: var(--muted); max-width: 42ch; line-height: 1.6; }
+.error-boundary button { min-height: 40px; margin-top: var(--space-2); padding: 0 var(--space-4); border: 0; border-radius: var(--radius-0); color: var(--accent-contrast); background: var(--accent); font-size: var(--text-md); font-weight: 600; }
+.error-boundary button:hover { background: var(--accent-dark); }
 .todo-action-button { min-height: 30px; padding: 0 7px; border: 0; border-radius: var(--radius-0); color: var(--muted); background: transparent; font-size: var(--text-xs); }
 .todo-action-button:hover { color: var(--accent-dark); background: var(--hover-wash); }
 .todo-action-button:disabled { cursor: wait; opacity: .6; }
@@ -389,7 +399,7 @@ code { padding: 2px 5px; border-radius: var(--radius-sm); background: var(--hove
   .sidebar-nav .sidebar-count { margin-left: 0; }
   .sidebar-section { display: flex; align-items: center; gap: 4px; overflow-x: auto; margin-top: 5px; }
   .sidebar-section-heading { flex: 0 0 auto; gap: 2px; padding: 0 4px; }
-  .sidebar-section-heading h2 { font-size: 12px; }
+  .sidebar-section-heading .sidebar-section-title { font-size: 12px; }
   .sidebar-manage-menu > summary { width: 48px; height: 48px; }
   .sidebar-section > .sidebar-link { width: auto; min-width: max-content; min-height: 48px; padding: 0 10px; }
   .sidebar-tag-section { margin-top: 3px; }
