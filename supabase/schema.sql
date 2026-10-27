@@ -56,14 +56,18 @@ create table public.todos (
   user_id uuid not null references auth.users (id) on delete cascade,
   project_id uuid,
   parent_task_id bigint,
-  title text not null check (char_length(title) between 1 and 200),
+  title text not null check (title = btrim(title) and char_length(title) between 1 and 200),
   description text not null default '' check (char_length(description) <= 2000),
   completed boolean not null default false,
+  completed_at timestamptz,
+  updated_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
   deleted_at timestamptz,
   priority text not null default 'none'
     check (priority in ('none', 'low', 'medium', 'high', 'urgent')),
-  recurrence text check (char_length(recurrence) <= 100),
+  recurrence text check (char_length(recurrence) <= 100
+    and recurrence ~ '^every (\d+ )?(days?|weeks?|months?|years?|(sun|mon|tue|wed|thu|fri|sat)(urday|nesday|rsday|day))?$'
+    and due_date is not null),
   due_date date,
   constraint todos_user_project_fkey
     foreign key (user_id, project_id)
@@ -77,6 +81,46 @@ create table public.todos (
   constraint todos_parent_task_not_self_check
     check (parent_task_id is null or parent_task_id <> id)
 );
+
+create or replace function public.todos_set_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger todos_set_updated_at
+  before update on public.todos
+  for each row execute function public.todos_set_updated_at();
+
+create or replace function public.todos_maintain_completion_timestamp()
+returns trigger language plpgsql as $$
+begin
+  if new.completed and not coalesce(old.completed, false) then
+    new.completed_at = now();
+  elsif not new.completed then
+    new.completed_at = null;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger todos_maintain_completion_timestamp
+  before update on public.todos
+  for each row execute function public.todos_maintain_completion_timestamp();
+
+create or replace function public.todos_force_created_at()
+returns trigger language plpgsql as $$
+begin
+  new.created_at = now();
+  return new;
+end;
+$$;
+
+create trigger todos_force_created_at
+  before insert on public.todos
+  for each row execute function public.todos_force_created_at();
 
 alter table public.todos enable row level security;
 
