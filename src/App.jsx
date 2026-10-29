@@ -14,6 +14,8 @@ import { chipColor, chipVars, projectColor } from "./services/colors.js";
 
 const filters = ["All", "Active", "Done", "Trash"];
 
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // auto-logout after 30 minutes without activity
+
 const dueFilterLabels = {
   "no-date": "No due date",
   overdue: "Overdue",
@@ -65,6 +67,7 @@ function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
   const [authError, setAuthError] = useState("");
+  const [passwordResetPending, setPasswordResetPending] = useState(false);
   const [todos, setTodos] = useState([]);
   const [todosReady, setTodosReady] = useState(false);
   const [projects, setProjects] = useState([]);
@@ -116,16 +119,49 @@ function App() {
   const addTriggerRef = useRef(null);
 
   // A11Y-DIS-01: the <details>-based popovers (tag picker, due picker, manage
-  // menus) must be dismissable with Escape like any other overlay.
+  // menus) close on Escape and on any click or view change outside them.
   useEffect(() => {
     const onKeyDown = (event) => {
       if (event.key !== "Escape") return;
       const details = event.target instanceof Element ? event.target.closest("details") : null;
       if (details) details.open = false;
     };
+    const onPointerDown = (event) => {
+      if (!(event.target instanceof Element)) return;
+      for (const details of document.querySelectorAll("details[open]")) {
+        if (!details.contains(event.target)) details.open = false;
+      }
+    };
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
   }, []);
+
+  // Auto-logout: after IDLE_TIMEOUT_MS without pointer or keyboard activity,
+  // the session ends locally and the login screen explains why (#4).
+  useEffect(() => {
+    if (!session?.user) return undefined;
+    let timerId;
+    const resetTimer = () => {
+      window.clearTimeout(timerId);
+      timerId = window.setTimeout(() => {
+        supabase.auth.signOut({ scope: "local" });
+        setAuthMessage(`You were signed out after ${IDLE_TIMEOUT_MS / 60000} minutes without activity.`);
+      }, IDLE_TIMEOUT_MS);
+    };
+    const markActivity = () => resetTimer();
+    window.addEventListener("pointerdown", markActivity, { passive: true });
+    window.addEventListener("keydown", markActivity);
+    resetTimer();
+    return () => {
+      window.clearTimeout(timerId);
+      window.removeEventListener("pointerdown", markActivity);
+      window.removeEventListener("keydown", markActivity);
+    };
+  }, [session?.user]);
 
   // BF-05: mirror the sidebar view in the URL hash so back/forward and deep
   // links work. applyHash runs on projects/tags changes too — a deep link can
@@ -210,8 +246,19 @@ function App() {
     if (!supabase) return undefined;
 
     let active = true;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (active) setSession(nextSession);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!active) return;
+      setSession(nextSession);
+      if (event === "PASSWORD_RECOVERY") {
+        // A reset link landed: the SDK exchanged it for a session that may
+        // only set a new password, so show that form instead of the app.
+        setPasswordResetPending(true);
+      }
+      if (event === "SIGNED_IN") setPasswordResetPending(false);
+      if (event === "SIGNED_OUT") {
+        // A stale view hash must not reopen after the next login (#3).
+        window.history.replaceState(null, "", window.location.pathname);
+      }
     });
 
     supabase.auth.getSession().then(({ data, error }) => {
@@ -240,7 +287,10 @@ function App() {
     let active = true;
     setTodosReady(false);
     setTagsReady(false);
+    setFilter("All");
+    setProjectFilter("all");
     setTagFilter("all");
+    setDueFilter("all");
     setEditingTagId(null);
     setListError("");
     setShowAddModal(false);
@@ -352,6 +402,42 @@ function App() {
     } else {
       setPassword("");
     }
+  }
+
+  async function handleResetRequest(event) {
+    event.preventDefault();
+    setBusy(true);
+    setAuthError("");
+    setAuthMessage("");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    setBusy(false);
+    if (error) {
+      setAuthError(friendlyError(error));
+      return;
+    }
+    setAuthMode("login");
+    setAuthMessage("Check your inbox for a password reset link.");
+  }
+
+  async function handlePasswordReset(event) {
+    event.preventDefault();
+    setBusy(true);
+    setAuthError("");
+    const { error } = await supabase.auth.updateUser({ password });
+    setBusy(false);
+    if (error) {
+      setAuthError(friendlyError(error));
+      return;
+    }
+    // The recovery session has done its job; end it so the next sign-in uses
+    // the new password like any other login.
+    setPasswordResetPending(false);
+    setPassword("");
+    setAuthMode("login");
+    await supabase.auth.signOut({ scope: "local" });
+    setAuthMessage("Password updated. Log in with your new password.");
   }
 
   async function addTodo(event) {
@@ -990,18 +1076,76 @@ function App() {
             </span>
             <span>Little List</span>
           </a>
-          <h1>{authMode === "login" ? "Log in" : "Sign up"}</h1>
+          <h1>{authMode === "login" ? "Log in" : authMode === "reset" ? "Reset your password" : "Sign up"}</h1>
           <p className="auth-description">
             {authMode === "login"
               ? "Log in to see your to-do list."
+              : authMode === "reset"
+              ? "Enter your email and we'll send you a reset link."
               : "Create an account and start organizing."}
           </p>
-          <form className="auth-form" onSubmit={handleAuthSubmit} aria-busy={busy}>
+          <form className="auth-form" onSubmit={authMode === "reset" ? handleResetRequest : handleAuthSubmit} aria-busy={busy}>
             <label htmlFor="email">Email address</label>
             <input id="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} required aria-describedby={authError ? "auth-error" : undefined} aria-invalid={authError ? true : undefined} />
-            <label htmlFor="password">Password</label>
+            {authMode !== "reset" && (
+              <>
+                <label htmlFor="password">Password</label>
+                <div className="password-field">
+                  <input id="password" type={showPassword ? "text" : "password"} autoComplete={authMode === "login" ? "current-password" : "new-password"} placeholder="At least 6 characters" minLength="6" value={password} onChange={(event) => setPassword(event.target.value)} required aria-describedby={authError ? "auth-error" : undefined} aria-invalid={authError ? true : undefined} />
+                  <button
+                    className="password-toggle"
+                    type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
+                    title={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowPassword((current) => !current)}
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                      {showPassword ? (
+                        <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z" />
+                      ) : (
+                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                      )}
+                    </svg>
+                  </button>
+                </div>
+                <button className="auth-forgot" type="button" onClick={() => { setAuthMode("reset"); setAuthError(""); setAuthMessage(""); }}>
+                  Forgot password?
+                </button>
+              </>
+            )}
+            {authError && <p className="notice error" role="alert" id="auth-error">{authError}</p>}
+            {authMessage && <p className="notice success" role="status">{authMessage}</p>}
+            <button className="primary-button auth-submit" type="submit" disabled={busy}>
+              {busy ? "One moment…" : authMode === "login" ? "Log in" : authMode === "reset" ? "Send reset link" : "Sign up"}
+            </button>
+          </form>
+          <p className="auth-switch">
+            {authMode === "login" ? "Don't have an account?" : authMode === "reset" ? "Remember it?" : "Already have an account?"}{" "}
+            <button type="button" onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); setAuthError(""); setAuthMessage(""); }}>
+              {authMode === "login" ? "Sign up" : "Log in"}
+            </button>
+          </p>
+        </section>
+        <p className="auth-footer">Private by design</p>
+      </main>
+    );
+  }
+
+  if (passwordResetPending && session) {
+    return (
+      <main className="auth-screen">
+        <section className="auth-card">
+          <span className="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </span>
+          <p className="eyebrow">ONE SMALL STEP</p>
+          <h1>Set a new password</h1>
+          <p className="auth-description">Choose a new password for your account.</p>
+          <form className="auth-form" onSubmit={handlePasswordReset} aria-busy={busy}>
+            <label htmlFor="new-password">New password</label>
             <div className="password-field">
-              <input id="password" type={showPassword ? "text" : "password"} autoComplete={authMode === "login" ? "current-password" : "new-password"} placeholder="At least 6 characters" minLength="6" value={password} onChange={(event) => setPassword(event.target.value)} required aria-describedby={authError ? "auth-error" : undefined} aria-invalid={authError ? true : undefined} />
+              <input id="new-password" type={showPassword ? "text" : "password"} autoComplete="new-password" placeholder="At least 6 characters" minLength="6" value={password} onChange={(event) => setPassword(event.target.value)} required />
               <button
                 className="password-toggle"
                 type="button"
@@ -1019,18 +1163,11 @@ function App() {
                 </svg>
               </button>
             </div>
-            {authError && <p className="notice error" role="alert" id="auth-error">{authError}</p>}
-            {authMessage && <p className="notice success" role="status">{authMessage}</p>}
+            {authError && <p className="notice error" role="alert">{authError}</p>}
             <button className="primary-button auth-submit" type="submit" disabled={busy}>
-              {busy ? "One moment…" : authMode === "login" ? "Log in" : "Sign up"}
+              {busy ? "One moment…" : "Save new password"}
             </button>
           </form>
-          <p className="auth-switch">
-            {authMode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button type="button" onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); setAuthError(""); setAuthMessage(""); }}>
-              {authMode === "login" ? "Sign up" : "Log in"}
-            </button>
-          </p>
         </section>
         <p className="auth-footer">Private by design</p>
       </main>

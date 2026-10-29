@@ -194,6 +194,8 @@ h1, h2, p { margin-top: 0; }
 .primary-button:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); }
 .auth-submit { height: 48px; margin-top: 12px; }
 .auth-switch { margin: 26px 0 0; color: var(--muted); text-align: center; font-size: var(--text-md); }
+.auth-forgot { padding: 0; border: 0; background: none; color: var(--accent-dark); font-size: var(--text-sm); font-weight: 600; justify-self: start; }
+.auth-forgot:hover { text-decoration: underline; }
 .auth-switch button { padding: 0; border: 0; color: var(--accent-dark); background: none; font-size: inherit; font-weight: 700; }
 .auth-footer { align-self: end; margin: 0; color: var(--muted); font-size: var(--text-sm); text-align: center; }
 .auth-footer span { margin: 0 7px; color: var(--faint); }
