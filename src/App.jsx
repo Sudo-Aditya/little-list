@@ -9,6 +9,7 @@ import { classifyDueDate, dueDateFilters, dueDateViewBuckets, formatDueDate, get
 import { hasLiveOccurrence, nextRecurrenceDate } from "./services/recurrence.js";
 import { parseQuickAdd } from "./services/quick-add.js";
 import { friendlyError } from "./services/error-mapping.js";
+import { parseView, serializeView } from "./services/view-route.js";
 import { chipColor, chipVars, projectColor } from "./services/colors.js";
 
 const filters = ["All", "Active", "Done", "Trash"];
@@ -125,6 +126,35 @@ function App() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  // BF-05: mirror the sidebar view in the URL hash so back/forward and deep
+  // links work. applyHash runs on projects/tags changes too — a deep link can
+  // only be validated once the id lists are loaded.
+  useEffect(() => {
+    if (!session?.user) return undefined;
+    const applyHash = () => {
+      const view = parseView(window.location.hash, {
+        projectIds: projects.map((project) => project.id),
+        tagIds: tags.map((tag) => tag.id),
+      });
+      if (!view) return;
+      setFilter(view.filter);
+      setProjectFilter(view.projectFilter);
+      setTagFilter(view.tagFilter);
+      setDueFilter(view.dueFilter);
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, [session?.user, projects, tags]);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    const hash = serializeView({ filter, projectFilter, tagFilter, dueFilter });
+    if (window.location.hash === hash) return;
+    if (window.location.hash === "") window.history.replaceState(null, "", hash);
+    else window.location.hash = hash;
+  }, [session?.user, filter, projectFilter, tagFilter, dueFilter]);
 
   function closeAddModal() {
     setShowAddModal(false);

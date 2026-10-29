@@ -393,6 +393,7 @@ This log records significant implementation, configuration, and verification ste
 - **Post-flight functional probes: 8/8 pass** against the live database — whitespace title (C-01), garbage recurrence (C-07), recurrence-without-due-date (C-08), NFC/NFD duplicate tag (C-02), duplicate active position (C-04) all rejected with the expected Postgres codes; client-set `created_at` forced to now() (C-11), `updated_at` bumps on update (C-09 foundation), completing stamps `completed_at` (C-10). Confirmed in `pg_catalog`: 3 new CHECK constraints on todos, 3 unique indexes (2 normalization-aware), 3 new triggers; zero probe debris left behind.
 - The deployed client activates OCC automatically: the next authenticated load selects `updated_at` successfully and switches to guarded updates — no redeploy needed. **The access token used for this session should now be revoked** (Account → Access Tokens), per the standing rule that campaign credentials are short-lived.
 - Still open: push `.github/workflows/ci.yml` once the GitHub token has `workflow` scope.
+- **BF-05 fixed (2026-10-28):** sidebar views now sync with the URL hash (`#/inbox` … `#/project/<id>`, `#/tag/<id>`), so back/forward navigate views and deep links work. One pure service (`view-route.js`, 3 unit tests) plus two effects in `App.jsx`; no router dependency. Toolbar due-date refinements stay local by design. Not exercised live (needs an authenticated session).
 
 ## Remaining before friends can use it
 
